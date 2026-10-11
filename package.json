@@ -1,0 +1,11 @@
+{
+  "name": "family-meal-planner",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Family dinner planner: Google Apps Script web app backed by one Google Sheet.",
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build-dist.js"
+  },
+  "engines": { "node": ">=18" }
+}

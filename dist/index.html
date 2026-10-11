@@ -1,0 +1,2114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Meal Planner</title>
+<style>
+:root {
+  --bg: #f6f7f9; --card: #ffffff; --ink: #1f2933; --muted: #637083; --line: #dde2e8;
+  --brand: #2f6f4f; --brand-ink: #ffffff; --accent: #e8f3ec; --warn: #b45309; --bad: #b42318;
+  --good-bg: #dff3e6; --mid-bg: #fdf0cf; --low-bg: #fde2df; --radius: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14181d; --card: #1e242b; --ink: #edf1f5; --muted: #9aa7b6; --line: #333c46;
+    --brand: #5bb381; --brand-ink: #0c1a12; --accent: #203a2c; --warn: #f2b45a; --bad: #ff8f84;
+    --good-bg: #1f4030; --mid-bg: #4a3b16; --low-bg: #4d2622;
+  }
+}
+* { box-sizing: border-box; }
+html { font-size: 18px; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.4; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 10px 16px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.top h1 { font-size: 1.1rem; margin: 0; }
+#nav { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+#nav button { min-height: 48px; padding: 0 16px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font-size: 1rem; cursor: pointer; }
+#nav button.on { background: var(--brand); color: var(--brand-ink); font-weight: 600; }
+.who { color: var(--muted); font-size: 0.8rem; }
+.busy { position: fixed; top: 0; left: 0; right: 0; height: 4px; background: var(--brand); z-index: 50; animation: pulse 1s infinite alternate; }
+@keyframes pulse { from { opacity: 0.3; } to { opacity: 1; } }
+main { max-width: 960px; margin: 0 auto; padding: 16px; }
+h2 { margin: 8px 0 12px; font-size: 1.3rem; }
+h3 { margin: 16px 0 6px; font-size: 1.05rem; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px; }
+.card.today { border-color: var(--brand); box-shadow: 0 0 0 2px var(--accent); }
+.card.dim { opacity: 0.65; }
+.day { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+.meal-main { font-size: 1.3rem; font-weight: 700; margin: 2px 0; }
+.sides, .meta { color: var(--muted); font-size: 0.9rem; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.row.between { justify-content: space-between; }
+.grow { flex: 1; }
+.btn { min-height: 48px; padding: 0 16px; border-radius: 12px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-size: 1rem; cursor: pointer; }
+.btn.primary { background: var(--brand); color: var(--brand-ink); border-color: var(--brand); font-weight: 600; }
+.btn.danger { color: var(--bad); }
+.btn.small { min-height: 40px; padding: 0 12px; font-size: 0.9rem; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 0.8rem; background: var(--accent); color: var(--ink); margin-right: 4px; }
+.badge.good { background: var(--good-bg); } .badge.mid { background: var(--mid-bg); } .badge.low { background: var(--low-bg); }
+.badge.warn { background: var(--mid-bg); color: var(--warn); }
+.empty { text-align: center; color: var(--muted); padding: 32px 8px; }
+input[type=text], input[type=date], input[type=number], input[type=email], select, textarea {
+  width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink); font: inherit; }
+textarea { min-height: 90px; }
+label.field { display: block; margin: 8px 0; font-size: 0.85rem; color: var(--muted); }
+label.field > :not(span) { margin-top: 3px; }
+label.check { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; margin-right: 12px; color: var(--ink); }
+input[type=checkbox], input[type=radio] { width: 24px; height: 24px; accent-color: var(--brand); }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.stars button { background: none; border: 0; font-size: 1.6rem; min-width: 40px; min-height: 44px; cursor: pointer; color: #c9a227; }
+.list-item { display: flex; align-items: center; gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.list-item:last-child { border-bottom: 0; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 20; display: flex; align-items: flex-start; justify-content: center; overflow: auto; padding: 16px; }
+.dialog { background: var(--card); border-radius: var(--radius); width: 100%; max-width: 640px; padding: 16px; margin: auto; }
+.dialog.wide { max-width: 900px; }
+.dialog.full { max-width: none; min-height: calc(100vh - 32px); }
+.dialog h2 { margin-top: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+#toasts { position: fixed; bottom: 16px; left: 16px; right: 16px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 40; pointer-events: none; }
+.toast { background: #202a33; color: #fff; padding: 12px 16px; border-radius: 12px; max-width: 560px; }
+.toast.err { background: var(--bad); }
+.banner { background: var(--mid-bg); border-radius: 12px; padding: 10px 14px; margin-bottom: 12px; }
+.ing-line { display: flex; gap: 12px; align-items: flex-start; padding: 6px 0; font-size: 1.05rem; }
+.ing-line.done span, .step.done p { text-decoration: line-through; color: var(--muted); }
+.step { display: flex; gap: 12px; padding: 8px 0; }
+.step p { margin: 0; font-size: 1.1rem; }
+.recipe-big { font-size: 1.15rem; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.tabs button { min-height: 44px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink); font-size: 1rem; cursor: pointer; }
+.tabs button.on { background: var(--brand); color: var(--brand-ink); }
+.aisle h3 { background: var(--accent); padding: 6px 10px; border-radius: 8px; }
+.item { display: flex; align-items: center; gap: 10px; padding: 6px 4px; min-height: 48px; border-bottom: 1px solid var(--line); }
+.item.carted .name { text-decoration: line-through; color: var(--muted); }
+.item .name { flex: 1; }
+.item small { color: var(--muted); display: block; }
+details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.edit-row { display: grid; grid-template-columns: 70px 90px 1fr 1fr auto auto; gap: 6px; align-items: center; margin-bottom: 6px; }
+.step-row { display: grid; grid-template-columns: 1fr 70px auto; gap: 6px; align-items: start; margin-bottom: 6px; }
+@media (max-width: 640px) { .edit-row { grid-template-columns: 1fr 1fr; } .step-row { grid-template-columns: 1fr; } html { font-size: 17px; } }
+@media print { .top, #toasts, .no-print, .busy { display: none !important; } body { background: #fff; color: #000; } .card { border: 0; } }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Family Meal Planner</h1>
+  <nav id="nav" aria-label="Sections"></nav>
+  <div id="who" class="who"></div>
+</header>
+<div id="busy" class="busy" hidden></div>
+<main id="view" aria-live="polite"></main>
+<div id="toasts"></div>
+<div id="dialogs"></div>
+<script>
+// Date helpers. Dates are 'YYYY-MM-DD' strings; math is UTC-based so DST never matters.
+var Dates = (function () {
+  'use strict';
+
+  var MS = 86400000;
+
+  function parse_(iso) {
+    var p = String(iso).split('-');
+    return Date.UTC(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+  }
+
+  function format_(ms) {
+    return new Date(ms).toISOString().slice(0, 10);
+  }
+
+  function isValid(iso) {
+    if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+    return format_(parse_(iso)) === iso;
+  }
+
+  function addDays(iso, n) {
+    return format_(parse_(iso) + n * MS);
+  }
+
+  // Whole days from a to b (b - a).
+  function diffDays(a, b) {
+    return Math.round((parse_(b) - parse_(a)) / MS);
+  }
+
+  // 0 = Sunday ... 6 = Saturday
+  function dayOfWeek(iso) {
+    return new Date(parse_(iso)).getUTCDay();
+  }
+
+  function startOfWeek(iso, firstDay) {
+    var fd = firstDay == null || firstDay === '' ? 0 : Number(firstDay);
+    var back = (dayOfWeek(iso) - fd + 7) % 7;
+    return addDays(iso, -back);
+  }
+
+  function range(startIso, n) {
+    var out = [];
+    for (var i = 0; i < n; i++) out.push(addDays(startIso, i));
+    return out;
+  }
+
+  function month(iso) {
+    return Number(String(iso).slice(5, 7));
+  }
+
+  // seasonMonthsMap: { Winter: [12,1,2], Spring: [3,4,5], ... }
+  function seasonOf(iso, seasonMonthsMap) {
+    var m = month(iso);
+    for (var name in seasonMonthsMap) {
+      if (Object.prototype.hasOwnProperty.call(seasonMonthsMap, name) && seasonMonthsMap[name].indexOf(m) !== -1) {
+        return name;
+      }
+    }
+    return null;
+  }
+
+  function isWeekend(iso, weekendDays) {
+    return weekendDays.indexOf(dayOfWeek(iso)) !== -1;
+  }
+
+  // "0,6" or 6 or [0,6] -> [0,6]
+  function parseDayList(value) {
+    if (Array.isArray(value)) return value.map(Number);
+    return String(value == null ? '' : value)
+      .split(',')
+      .map(function (s) { return s.trim(); })
+      .filter(function (s) { return s !== ''; })
+      .map(Number);
+  }
+
+  return {
+    isValid: isValid,
+    addDays: addDays,
+    diffDays: diffDays,
+    dayOfWeek: dayOfWeek,
+    startOfWeek: startOfWeek,
+    range: range,
+    month: month,
+    seasonOf: seasonOf,
+    isWeekend: isWeekend,
+    parseDayList: parseDayList
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) { module.exports = Dates; }
+</script>
+<script>
+// Quantities and units: parsing, formatting, conversion, combining.
+var Units = (function () {
+  'use strict';
+
+  var FRAC = { '¼': 0.25, '½': 0.5, '¾': 0.75, '⅓': 1 / 3, '⅔': 2 / 3, '⅛': 0.125, '⅜': 0.375, '⅝': 0.625, '⅞': 0.875 };
+  var EIGHTHS = ['', '⅛', '¼', '⅜', '½', '⅝', '¾', '⅞'];
+
+  function single_(text) {
+    var s = String(text).trim();
+    var m;
+    if ((m = /^(\d+)\s+(\d+)\/(\d+)$/.exec(s))) {
+      return Number(m[3]) === 0 ? null : Number(m[1]) + Number(m[2]) / Number(m[3]);
+    }
+    if ((m = /^(\d+)\/(\d+)$/.exec(s))) {
+      return Number(m[2]) === 0 ? null : Number(m[1]) / Number(m[2]);
+    }
+    if ((m = /^(\d+(?:\.\d+)?)\s*([¼½¾⅓⅔⅛⅜⅝⅞])$/.exec(s))) return Number(m[1]) + FRAC[m[2]];
+    if ((m = /^([¼½¾⅓⅔⅛⅜⅝⅞])$/.exec(s))) return FRAC[m[1]];
+    if ((m = /^(\d+(?:\.\d+)?|\.\d+)$/.exec(s))) return Number(m[1]);
+    return null;
+  }
+
+  // '1 1/2' -> 1.5, '2-3' -> 3 (approx), 'a pinch' / '' -> null
+  function parseQty(text) {
+    if (text == null) return { qty: null, approx: false };
+    var s = String(text).trim();
+    if (!s) return { qty: null, approx: false };
+    var q = single_(s);
+    if (q !== null) return { qty: q, approx: false };
+    var m = /^(.+?)\s*(-|–|—|to)\s*(.+)$/i.exec(s);
+    if (m) {
+      var a = single_(m[1]);
+      var b = single_(m[3]);
+      if (a !== null && b !== null) {
+        if (m[2] === '-' && /^\d+$/.test(m[1].trim()) && /^\d+\/\d+$/.test(m[3].trim())) {
+          return { qty: a + b, approx: false }; // "1-1/2" is a mixed number
+        }
+        return { qty: Math.max(a, b), approx: true };
+      }
+    }
+    return { qty: null, approx: false };
+  }
+
+  // 1.5 -> '1½', 0.333 -> '⅓', 2 -> '2'
+  function formatQty(n) {
+    if (n == null || n === '' || isNaN(n)) return '';
+    n = Number(n);
+    var whole = Math.floor(n + 1e-9);
+    var frac = n - whole;
+    if (frac < 0) frac = 0;
+    var f = '';
+    if (Math.abs(frac - 1 / 3) < 0.03) {
+      f = '⅓';
+    } else if (Math.abs(frac - 2 / 3) < 0.03) {
+      f = '⅔';
+    } else {
+      var eighths = Math.round(frac * 8);
+      if (eighths === 8) { whole += 1; eighths = 0; }
+      f = EIGHTHS[eighths];
+    }
+    if (whole === 0 && f === '') return n > 0 ? '⅛' : '0';
+    return whole > 0 ? String(whole) + f : f;
+  }
+
+  function row_(text, table) {
+    var t = String(text == null ? '' : text).trim().toLowerCase();
+    if (!t) return null;
+    for (var i = 0; i < table.length; i++) {
+      if (String(table[i].unit).toLowerCase() === t) return table[i];
+    }
+    var canon = normalizeUnit(t, table);
+    if (!canon) return null;
+    for (var j = 0; j < table.length; j++) {
+      if (table[j].unit === canon) return table[j];
+    }
+    return null;
+  }
+
+  // 'tablespoons' -> 'tbsp'; unknown -> null
+  function normalizeUnit(text, unitsTable) {
+    var t = String(text == null ? '' : text).trim().toLowerCase().replace(/\.$/, '');
+    if (!t) return null;
+    var cands = [t];
+    if (/s$/.test(t)) cands.push(t.slice(0, -1));
+    if (/es$/.test(t)) cands.push(t.slice(0, -2));
+    for (var i = 0; i < unitsTable.length; i++) {
+      var row = unitsTable[i];
+      var names = [String(row.unit).toLowerCase()].concat(
+        String(row.aliases || '').split(',').map(function (a) { return a.trim().toLowerCase(); }).filter(Boolean)
+      );
+      for (var c = 0; c < cands.length; c++) {
+        if (names.indexOf(cands[c]) !== -1) return row.unit;
+      }
+    }
+    return null;
+  }
+
+  // Returns the converted quantity, or null when units are unknown or in different families.
+  // Count units (clove, can, ...) never convert into each other.
+  function convert(qty, from, to, unitsTable) {
+    if (String(from || '').toLowerCase() === String(to || '').toLowerCase()) return qty;
+    var rf = row_(from, unitsTable);
+    var rt = row_(to, unitsTable);
+    if (!rf || !rt || rf.family !== rt.family) return null;
+    if (rf.family === 'count') return rf.unit === rt.unit ? qty : null;
+    return qty * Number(rf.to_base) / Number(rt.to_base);
+  }
+
+  // a, b = { qty, unit }. Result is in a's unit, or null if they cannot combine.
+  function combine(a, b, unitsTable) {
+    if (a.qty == null || b.qty == null) return null;
+    if (String(a.unit || '').toLowerCase() === String(b.unit || '').toLowerCase()) {
+      return { qty: Math.round((a.qty + b.qty) * 1e9) / 1e9, unit: a.unit };
+    }
+    var c = convert(b.qty, b.unit, a.unit, unitsTable);
+    if (c == null) return null;
+    return { qty: Math.round((a.qty + c) * 1e9) / 1e9, unit: a.unit };
+  }
+
+  return {
+    parseQty: parseQty,
+    formatQty: formatQty,
+    normalizeUnit: normalizeUnit,
+    convert: convert,
+    combine: combine
+  };
+})();
+
+if (typeof module !== 'undefined' && module.exports) { module.exports = Units; }
+</script>
+<script>
+// Recipe display helpers: scaling and grouping.
+var Recipe = (function () {
+  'use strict';
+
+  function Units_() { return (typeof module !== 'undefined' && module.exports) ? require('./units') : Units; }
+
+  // lines: [{qty, qty_text, ...}] -> new lines scaled from fromServings to toServings.
+  function scaleIngredients(lines, fromServings, toServings) {
+    var from = Number(fromServings);
+    var to = Number(toServings);
+    if (!(from > 0) || !(to > 0)) throw new Error('Servings must be greater than zero');
+    var factor = to / from;
+    return (lines || []).map(function (line) {
+      var copy = {};
+      Object.keys(line).forEach(function (k) { copy[k] = line[k]; });
+      if (line.qty != null && line.qty !== '' && isFinite(line.qty)) {
+        copy.qty = Math.round(Number(line.qty) * factor * 1e6) / 1e6;
+        copy.qty_text = Units_().formatQty(copy.qty);
+      }
+      return copy;
+    });
+  }
+
+  // -> [{label, lines}] in original order, unlabeled group first.
+  function groupByLabel(lines) {
+    var groups = [];
+    var byLabel = {};
+    (lines || []).forEach(function (line) {
+      var label = line.group_label || '';
+      if (!byLabel[label]) {
+        byLabel[label] = { label: label, lines: [] };
+        groups.push(byLabel[label]);
+      }
+      byLabel[label].lines.push(line);
+    });
+    groups.sort(function (a, b) { return (a.label === '' ? 0 : 1) - (b.label === '' ? 0 : 1); });
+    return groups;
+  }
+
+  return { scaleIngredients: scaleIngredients, groupByLabel: groupByLabel };
+})();
+
+if (typeof module !== 'undefined' && module.exports) { module.exports = Recipe; }
+</script>
+<script>
+// Shared UI plumbing: DOM builder, server calls, dialogs, toasts, tabs, auto-refresh.
+// Screens live in their own files and register themselves with UI.screens.
+var UI = (function () {
+  'use strict';
+
+  var state = { boot: null, tab: 'week', today: '', inflight: 0, dialogs: 0 };
+  var screens = {};
+  var TABS = [['week', 'This Week'], ['plan', 'Plan'], ['dishes', 'Dishes'], ['restaurants', 'Restaurants'], ['shopping', 'Shopping']];
+  var DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var LONG_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function appendChild_(node, c) {
+    if (c == null || c === false) return;
+    if (Array.isArray(c)) { c.forEach(function (x) { appendChild_(node, x); }); return; }
+    node.appendChild(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+
+  // h('div', {class: 'x', onclick: fn}, child, 'text', [more children])
+  function h(tag, attrs) {
+    var node = document.createElement(tag);
+    var pendingValue;
+    Object.keys(attrs || {}).forEach(function (k) {
+      var v = attrs[k];
+      if (v == null || v === false) return;
+      if (k === 'class') node.className = v;
+      else if (k === 'text') node.textContent = v;
+      else if (k === 'value') pendingValue = v;
+      else if (k.indexOf('on') === 0 && typeof v === 'function') node.addEventListener(k.slice(2), v);
+      else if (k === 'checked' || k === 'disabled' || k === 'selected') node[k] = !!v;
+      else node.setAttribute(k, v === true ? '' : v);
+    });
+    for (var i = 2; i < arguments.length; i++) appendChild_(node, arguments[i]);
+    if (pendingValue !== undefined) node.value = pendingValue;
+    return node;
+  }
+
+  function busy_(delta) {
+    state.inflight += delta;
+    var bar = document.getElementById('busy');
+    if (bar) bar.hidden = state.inflight <= 0;
+  }
+
+  // Promise wrapper around google.script.run.
+  function call(name) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (resolve, reject) {
+      if (typeof google === 'undefined' || !google.script) {
+        reject(new Error('This page must be opened from the Google Apps Script link.'));
+        return;
+      }
+      busy_(1);
+      var runner = google.script.run
+        .withSuccessHandler(function (r) { busy_(-1); resolve(r); })
+        .withFailureHandler(function (e) {
+          busy_(-1);
+          reject(new Error(String(e && e.message ? e.message : e).replace(/^Error:\s*/, '')));
+        });
+      runner[name].apply(runner, args);
+    });
+  }
+
+  function toast(message, isError) {
+    var box = document.getElementById('toasts');
+    var t = h('div', { class: 'toast' + (isError ? ' err' : ''), text: message });
+    box.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, isError ? 8000 : 4000);
+  }
+
+  function fail(e) { toast(e && e.message ? e.message : String(e), true); }
+
+  // dialog('Title', bodyNode, { wide, full, actions: [{label, primary, danger, onclick}] }) -> { close, body }
+  function dialog(title, body, opts) {
+    var o = opts || {};
+    var root = document.getElementById('dialogs');
+    var overlay = h('div', { class: 'overlay' });
+    var box = h('div', { class: 'dialog' + (o.wide ? ' wide' : '') + (o.full ? ' full' : ''), role: 'dialog' });
+    var api = {
+      body: body,
+      close: function () {
+        if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); state.dialogs -= 1; }
+        if (o.onclose) o.onclose();
+      }
+    };
+    var actions = h('div', { class: 'actions' });
+    (o.actions || []).forEach(function (a) {
+      actions.appendChild(h('button', {
+        class: 'btn' + (a.primary ? ' primary' : '') + (a.danger ? ' danger' : ''), text: a.label,
+        onclick: function () { a.onclick(api); }
+      }));
+    });
+    if (!o.noClose) actions.appendChild(h('button', { class: 'btn', text: o.closeLabel || 'Close', onclick: api.close }));
+    box.appendChild(h('h2', { text: title }));
+    box.appendChild(body);
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    root.appendChild(overlay);
+    state.dialogs += 1;
+    return api;
+  }
+
+  function confirmBox(message, okLabel) {
+    return new Promise(function (resolve) {
+      var done = false;
+      var d = dialog('Please confirm', h('p', { text: message }), {
+        noClose: true,
+        actions: [
+          { label: 'Cancel', onclick: function (x) { if (!done) { done = true; resolve(false); } x.close(); } },
+          { label: okLabel || 'OK', primary: true, onclick: function (x) { if (!done) { done = true; resolve(true); } x.close(); } }
+        ]
+      });
+      return d;
+    });
+  }
+
+  function promptBox(title, label, initial) {
+    return new Promise(function (resolve) {
+      var input = h('input', { type: 'text', value: initial || '' });
+      dialog(title, h('label', { class: 'field' }, h('span', { text: label }), input), {
+        noClose: true,
+        actions: [
+          { label: 'Cancel', onclick: function (x) { x.close(); resolve(null); } },
+          { label: 'OK', primary: true, onclick: function (x) { x.close(); resolve(input.value.trim()); } }
+        ]
+      });
+      setTimeout(function () { input.focus(); }, 50);
+    });
+  }
+
+  function field(label, input) {
+    return h('label', { class: 'field' }, h('span', { text: label }), input);
+  }
+
+  function select(options, value, onchange, blankLabel) {
+    var s = h('select', { onchange: onchange });
+    if (blankLabel !== undefined) s.appendChild(h('option', { value: '', text: blankLabel }));
+    options.forEach(function (o) {
+      var val = typeof o === 'object' ? o.value : o;
+      var text = typeof o === 'object' ? o.label : o;
+      s.appendChild(h('option', { value: val, text: text }));
+    });
+    s.value = value == null ? '' : value;
+    return s;
+  }
+
+  function stars(current, onRate) {
+    var wrap = h('span', { class: 'stars' });
+    for (var i = 1; i <= 5; i++) {
+      (function (n) {
+        wrap.appendChild(h('button', {
+          type: 'button', 'aria-label': n + ' star' + (n > 1 ? 's' : ''),
+          text: current != null && n <= Math.round(current) ? '★' : '☆',
+          onclick: onRate ? function () { onRate(n); } : null, disabled: !onRate
+        }));
+      })(i);
+    }
+    return wrap;
+  }
+
+  function healthBadge(score, label) {
+    if (score == null || score === '') return h('span', { class: 'badge', text: (label || 'Health') + ' –' });
+    var cls = score >= 7 ? 'good' : score >= 4 ? 'mid' : 'low';
+    return h('span', { class: 'badge ' + cls, text: (label || 'Health') + ' ' + score });
+  }
+
+  function dayLabel(iso) {
+    var d = Dates.dayOfWeek(iso);
+    var text = DAY_NAMES[d] + ' ' + MONTHS[Dates.month(iso) - 1] + ' ' + Number(iso.slice(8, 10));
+    if (iso === state.today) return 'Today, ' + text;
+    if (iso === Dates.addDays(state.today, 1)) return 'Tomorrow, ' + text;
+    return text;
+  }
+
+  function longDate(iso) {
+    return LONG_DAYS[Dates.dayOfWeek(iso)] + ', ' + MONTHS[Dates.month(iso) - 1] + ' ' + Number(iso.slice(8, 10));
+  }
+
+  function localToday() {
+    var tz = state.boot && state.boot.settings.timezone;
+    try {
+      return new Intl.DateTimeFormat('en-CA', { timeZone: tz || undefined, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+    } catch (e) {
+      return state.today;
+    }
+  }
+
+  function show(tab) {
+    state.tab = tab;
+    var nav = document.getElementById('nav');
+    Array.prototype.forEach.call(nav.children, function (b) { b.className = b.getAttribute('data-tab') === tab ? 'on' : ''; });
+    var view = document.getElementById('view');
+    view.innerHTML = '';
+    if (screens[tab]) screens[tab].render(view);
+  }
+
+  function refreshCurrent() {
+    if (state.dialogs > 0) return;
+    var s = screens[state.tab];
+    if (s && s.refresh) s.refresh();
+  }
+
+  function init() {
+    var view = document.getElementById('view');
+    view.appendChild(h('div', { class: 'empty', text: 'Loading...' }));
+    call('api_bootstrap').then(function (boot) {
+      state.boot = boot;
+      state.today = boot.today;
+      document.getElementById('who').textContent = boot.me.name + (boot.activeProfile && boot.activeProfile !== 'Normal' ? ' • ' + boot.activeProfile : '');
+      var nav = document.getElementById('nav');
+      TABS.forEach(function (t) {
+        nav.appendChild(h('button', { 'data-tab': t[0], text: t[1], onclick: function () { show(t[0]); } }));
+      });
+      show('week');
+      var minutes = Number(boot.settings.refresh_minutes) || 5;
+      setInterval(refreshCurrent, minutes * 60000);
+      setInterval(function () {
+        var now = localToday();
+        if (now && now !== state.today) {
+          state.today = now;
+          if (state.tab === 'week') show('week');
+        }
+      }, 30000);
+    }).catch(function (e) {
+      view.innerHTML = '';
+      view.appendChild(h('div', { class: 'card' }, h('h2', { text: 'Cannot open the planner' }), h('p', { text: e.message })));
+    });
+  }
+
+  return {
+    state: state, screens: screens, h: h, call: call, toast: toast, fail: fail, dialog: dialog,
+    confirmBox: confirmBox, promptBox: promptBox, field: field, select: select, stars: stars, healthBadge: healthBadge,
+    dayLabel: dayLabel, longDate: longDate, show: show, init: init, localToday: localToday
+  };
+})();
+</script>
+<script>
+// Kitchen recipe view: opens from a night on the schedule. Main dish first, then each side.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var wakeLock = null;
+  var timers = [];
+
+  function requestWake() {
+    try {
+      if (navigator.wakeLock && navigator.wakeLock.request) {
+        navigator.wakeLock.request('screen').then(function (l) { wakeLock = l; }).catch(function () { /* not allowed here */ });
+      }
+    } catch (e) { /* screen stays on only where the browser allows it */ }
+  }
+
+  function releaseWake() {
+    try { if (wakeLock) wakeLock.release(); } catch (e) { /* ignore */ }
+    wakeLock = null;
+    timers.forEach(clearInterval);
+    timers = [];
+  }
+
+  function timerButton(minutes) {
+    var remaining = 0;
+    var id = null;
+    var btn = h('button', { class: 'btn small', type: 'button', text: '⏱ ' + minutes + ' min: start' });
+    btn.addEventListener('click', function () {
+      if (id) { clearInterval(id); id = null; btn.textContent = '⏱ ' + minutes + ' min: start'; return; }
+      remaining = minutes * 60;
+      id = setInterval(function () {
+        remaining -= 1;
+        if (remaining <= 0) {
+          clearInterval(id);
+          id = null;
+          btn.textContent = '⏱ Time is up!';
+          UI.toast('Timer finished (' + minutes + ' min)');
+          try { if (navigator.vibrate) navigator.vibrate([300, 150, 300]); } catch (e) { /* ignore */ }
+          return;
+        }
+        var m = Math.floor(remaining / 60);
+        var s = remaining % 60;
+        btn.textContent = '⏱ ' + m + ':' + (s < 10 ? '0' : '') + s + ' (tap to stop)';
+      }, 1000);
+      timers.push(id);
+    });
+    return btn;
+  }
+
+  function ingredientText(l) {
+    var text = [l.qty_text, l.unit, l.ingredient].filter(function (x) { return x !== '' && x != null; }).join(' ');
+    if (l.prep_note) text += ', ' + l.prep_note;
+    if (l.optional) text += ' (optional)';
+    return text;
+  }
+
+  // `key` identifies the line so a tick survives a redraw (for example after changing servings).
+  function checkLine(cls, content, ticks, key) {
+    var box = h('input', { type: 'checkbox', checked: !!ticks[key] });
+    var row = h('div', { class: cls + (ticks[key] ? ' done' : '') }, box, content);
+    box.addEventListener('change', function () { ticks[key] = box.checked; row.classList.toggle('done', box.checked); });
+    return row;
+  }
+
+  function renderDish(container, detail, view, rerender) {
+    container.innerHTML = '';
+    var dish = detail.dish;
+    var lines = detail.recipe.ingredients;
+    var steps = detail.recipe.steps;
+    container.appendChild(h('div', { class: 'row' },
+      h('strong', { text: dish.name }), UI.healthBadge(dish.healthy_score),
+      dish.prep_min || dish.cook_min ? h('span', { class: 'meta', text: 'Prep ' + (dish.prep_min || 0) + ' min • Cook ' + (dish.cook_min || 0) + ' min' }) : null));
+    if (dish.intro_notes) container.appendChild(h('p', { class: 'meta', text: dish.intro_notes }));
+
+    if (!lines.length && !steps.length) {
+      container.appendChild(h('div', { class: 'empty' },
+        h('p', { text: 'No recipe yet.' }),
+        h('button', { class: 'btn primary', text: 'Add recipe', onclick: function () { view.dialog.close(); UI.editDish(dish.name); } })));
+      return;
+    }
+
+    var base = Number(dish.servings) > 0 ? Number(dish.servings) : 4;
+    var servings = view.servings[dish.name] || view.slotServings || base;
+    var stepper = h('div', { class: 'row no-print' },
+      h('span', { text: 'Servings' }),
+      h('button', { class: 'btn small', type: 'button', text: '−', onclick: function () { if (servings > 1) { view.servings[dish.name] = servings - 1; rerender(); } } }),
+      h('strong', { text: String(servings) }),
+      h('button', { class: 'btn small', type: 'button', text: '+', onclick: function () { view.servings[dish.name] = servings + 1; rerender(); } }),
+      servings !== base ? h('span', { class: 'meta', text: '(recipe makes ' + base + ')' }) : null);
+    container.appendChild(stepper);
+
+    container.appendChild(h('h3', { text: 'Ingredients' }));
+    Recipe.groupByLabel(Recipe.scaleIngredients(lines, base, servings)).forEach(function (g) {
+      if (g.label) container.appendChild(h('h3', { text: g.label }));
+      g.lines.forEach(function (l) {
+        container.appendChild(checkLine('ing-line recipe-big', h('span', { text: ingredientText(l) }), view.ticks, 'i|' + dish.name + '|' + l.line_no));
+      });
+    });
+
+    container.appendChild(h('h3', { text: 'Directions' }));
+    var section = null;
+    steps.forEach(function (st) {
+      if (st.section_label && st.section_label !== section) {
+        section = st.section_label;
+        container.appendChild(h('h3', { text: section }));
+      }
+      var text = h('div', { class: 'grow' }, h('p', { text: st.step_no + '. ' + st.text }), st.timer_min ? timerButton(st.timer_min) : null);
+      container.appendChild(checkLine('step', text, view.ticks, 's|' + dish.name + '|' + st.step_no));
+    });
+  }
+
+  function restaurantDetails(slot) {
+    var info = slot.restaurant_info || { name: slot.restaurant };
+    var body = h('div', { class: 'recipe-big' },
+      h('p', { text: info.cuisine || '' }),
+      info.address ? h('p', { text: info.address }) : null,
+      info.phone ? h('p', null, h('a', { href: 'tel:' + info.phone, text: info.phone })) : null,
+      info.notes ? h('p', { text: 'Notes: ' + info.notes }) : null);
+    UI.dialog(info.name || slot.restaurant, body, { closeLabel: 'Done' });
+  }
+
+  UI.openRecipe = function (slot) {
+    if (slot.kind === 'restaurant') { restaurantDetails(slot); return; }
+    var names = [slot.dish].concat([slot.side_1, slot.side_2, slot.side_3].filter(Boolean));
+    var body = h('div', null, h('div', { class: 'empty', text: 'Loading recipes...' }));
+    var view = { servings: {}, ticks: {}, slotServings: Number(slot.servings) || 0, dialog: null };
+    view.dialog = UI.dialog(UI.dayLabel(slot.date), body, { full: true, closeLabel: 'Done', onclose: releaseWake });
+    requestWake();
+    Promise.all(names.map(function (n) { return call('api_getDish', n); })).then(function (dishes) {
+      var current = 0;
+      var tabs = h('div', { class: 'tabs' });
+      var content = h('div');
+      var draw = function () {
+        tabs.innerHTML = '';
+        dishes.forEach(function (d, i) {
+          tabs.appendChild(h('button', {
+            type: 'button', class: i === current ? 'on' : '',
+            text: (i === 0 ? 'Main: ' : 'Side: ') + d.dish.name,
+            onclick: function () { current = i; draw(); }
+          }));
+        });
+        renderDish(content, dishes[current], view, draw);
+      };
+      body.innerHTML = '';
+      body.appendChild(tabs);
+      body.appendChild(content);
+      draw();
+    }).catch(function (e) { view.dialog.close(); UI.fail(e); });
+  };
+})();
+</script>
+<script>
+// "This Week": today plus the next days that have something scheduled.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var container = null;
+  var slots = [];
+  var loadedAt = '';
+
+  function render(c) {
+    container = c;
+    load();
+  }
+
+  function load() {
+    var days = Number(UI.state.boot.settings.week_view_days) || 8;
+    return call('api_getWeek', UI.state.today, days).then(function (res) {
+      slots = res;
+      var d = new Date();
+      loadedAt = d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2);
+      draw();
+    }).catch(UI.fail);
+  }
+
+  function warn(res) {
+    if (res && res.warnings && res.warnings.length) UI.toast('Heads-up: ' + res.warnings.join(' • '));
+  }
+
+  function moveTo(s, date, mode, dlg) {
+    call('api_moveSlot', s.plan_id, date, mode).then(function (r) {
+      if (r.notes && r.notes.length) UI.toast(r.notes.join(' '));
+      if (dlg) dlg.close();
+      load();
+    }).catch(UI.fail);
+  }
+
+  function moveDialog(s) {
+    var date = h('input', { type: 'date', value: s.date });
+    var mode = 'swap';
+    var options = [
+      ['swap', "Swap with that day's meal"],
+      ['shift', 'Insert it there and push the other meals one day later'],
+      ['queue_existing', "Replace that day's meal and save it for next week"],
+      ['delete_existing', "Replace that day's meal and remove it"]
+    ];
+    var radios = h('div', { class: 'card' }, h('div', { class: 'meta', text: 'If that day already has a meal:' }));
+    options.forEach(function (o) {
+      var r = h('input', { type: 'radio', name: 'occupied', value: o[0], checked: o[0] === mode, onchange: function () { mode = o[0]; } });
+      radios.appendChild(h('label', { class: 'check' }, r, o[1]));
+      radios.appendChild(h('br'));
+    });
+    var body = h('div', null,
+      h('div', { class: 'row' },
+        h('button', { class: 'btn', text: '← A day earlier', onclick: function () { moveTo(s, Dates.addDays(s.date, -1), 'swap', dlg); } }),
+        h('button', { class: 'btn', text: 'A day later →', onclick: function () { moveTo(s, Dates.addDays(s.date, 1), 'swap', dlg); } })),
+      UI.field('Or move it to', date), radios);
+    var dlg = UI.dialog('Move ' + (s.dish || s.restaurant), body, {
+      actions: [{ label: 'Move', primary: true, onclick: function (d) { if (!date.value) return; moveTo(s, date.value, mode, d); } }]
+    });
+  }
+
+  function changeDish(s) {
+    UI.pickDish({ role: 'main', title: 'Change dinner for ' + UI.dayLabel(s.date) }).then(function (pick) {
+      if (!pick) return null;
+      return (pick.isNew ? Promise.resolve([]) : UI.defaultSides(pick.name)).then(function (sides) {
+        var input = { date: s.date, kind: 'home', side_1: sides[0] || '', side_2: sides[1] || '', side_3: sides[2] || '' };
+        if (pick.isNew) input.new_dish_name = pick.name; else input.dish = pick.name;
+        return call('api_setSlot', input);
+      });
+    }).then(function (res) { if (res) { warn(res); load(); } }).catch(UI.fail);
+  }
+
+  function changeRestaurant(s) {
+    UI.pickRestaurant({ date: s.date }).then(function (pick) {
+      if (!pick) return null;
+      var input = { date: s.date, kind: 'restaurant' };
+      if (pick.isNew) input.new_restaurant_name = pick.name; else input.restaurant = pick.name;
+      return call('api_setSlot', input);
+    }).then(function (res) { if (res) { warn(res); load(); } }).catch(UI.fail);
+  }
+
+  function card(s) {
+    var isRest = s.kind === 'restaurant';
+    var main;
+    var sub = null;
+    if (isRest) {
+      var info = s.restaurant_info || {};
+      main = h('div', { class: 'meal-main', text: '🍽 ' + s.restaurant });
+      sub = h('div', { class: 'meta', text: ['Eating out', info.cuisine, info.phone].filter(Boolean).join(' • ') });
+    } else {
+      main = h('div', { class: 'meal-main', text: s.dish });
+      var sides = (s.sides_info || []).map(function (x) { return x.name; });
+      if (sides.length) sub = h('div', { class: 'sides', text: 'with ' + sides.join(' • ') });
+    }
+    var health = null;
+    if (!isRest) {
+      var parts = [s.dish_info].concat(s.sides_info || []).filter(function (x) { return x && x.health != null; })
+        .map(function (x) { return x.name + ' ' + x.health; });
+      health = h('div', { class: 'row' }, UI.healthBadge(s.meal_health, 'Meal health'),
+        parts.length > 1 ? h('span', { class: 'meta', text: parts.join(' • ') }) : null,
+        s.dish_info && s.dish_info.status === 'idea' ? h('span', { class: 'badge warn', text: 'New idea' }) : null);
+    }
+    var buttons = h('div', { class: 'row no-print' },
+      h('button', { class: 'btn primary', text: isRest ? 'Details' : 'Recipe', onclick: function () { UI.openRecipe(s); } }),
+      h('button', { class: 'btn', text: 'Move', onclick: function () { moveDialog(s); } }),
+      h('button', { class: 'btn', text: isRest ? 'Change restaurant' : 'Eat out', onclick: function () {
+        if (isRest) changeRestaurant(s); else UI.eatOutDialog({ date: s.date, onDone: load });
+      } }),
+      isRest ? null : h('button', { class: 'btn', text: 'Change dish', onclick: function () { changeDish(s); } }),
+      s.status === 'cooked'
+        ? h('span', { class: 'badge good', text: '✓ Done' })
+        : h('button', { class: 'btn', text: isRest ? 'Ate here' : 'Cooked it', onclick: function () {
+          call('api_markCooked', s.plan_id).then(load).catch(UI.fail);
+        } }));
+
+    var node = h('div', { class: 'card' + (s.date === UI.state.today ? ' today' : ''), draggable: 'true' },
+      h('div', { class: 'day', text: UI.dayLabel(s.date) }), main, sub, health, buttons);
+    node.addEventListener('dragstart', function (e) { e.dataTransfer.setData('text/plain', s.plan_id); });
+    node.addEventListener('dragover', function (e) { e.preventDefault(); });
+    node.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var id = e.dataTransfer.getData('text/plain');
+      if (id && id !== s.plan_id) moveTo({ plan_id: id }, s.date, 'swap', null);
+    });
+    return node;
+  }
+
+  function draw() {
+    container.innerHTML = '';
+    container.appendChild(h('div', { class: 'row between' },
+      h('h2', { text: 'This week' }),
+      h('div', { class: 'row no-print' },
+        h('span', { class: 'meta', text: 'Updated ' + loadedAt }),
+        h('button', { class: 'btn small', text: 'Refresh', onclick: load }))));
+    if (!slots.length) {
+      container.appendChild(h('div', { class: 'empty' },
+        h('p', { text: 'Nothing is scheduled yet.' }),
+        h('button', { class: 'btn primary', text: 'Plan the week', onclick: function () { UI.show('plan'); } })));
+      return;
+    }
+    slots.forEach(function (s) { container.appendChild(card(s)); });
+  }
+
+  UI.screens.week = { render: render, refresh: load };
+})();
+</script>
+<script>
+// Plan: a two-week draft grid. Suggest fills open days, picks are kept by locking them.
+// The draft auto-saves per person and is restored when you come back; "Save plan" makes it official.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var GRID_DAYS = 14;
+  var SLOT_FIELDS = ['plan_id', 'date', 'kind', 'dish', 'side_1', 'side_2', 'side_3', 'restaurant', 'servings', 'status', 'locked', 'notes', 'new_dish_name', 'new_restaurant_name'];
+  var container = null;
+  var P = null;
+  var statusEl = null;
+
+  function settings() { return UI.state.boot.settings; }
+  function planDays() { return Number(settings().plan_days) || 7; }
+
+  function render(c) {
+    container = c;
+    if (P) { draw(); return; }
+    var base = Dates.startOfWeek(UI.state.today, settings().first_day_of_week);
+    load(Dates.addDays(base, 7));
+  }
+
+  function clientSlot(s) {
+    var out = {};
+    SLOT_FIELDS.forEach(function (k) { out[k] = s[k] == null ? '' : s[k]; });
+    out.locked = s.locked === true || String(s.locked).toUpperCase() === 'TRUE';
+    out._health = s.meal_health != null ? s.meal_health : null;
+    return out;
+  }
+
+  function cleanSlots() {
+    return P.dates.map(function (d) { return P.slots[d]; }).filter(Boolean).map(function (s) {
+      var o = {};
+      SLOT_FIELDS.forEach(function (k) { if (s[k] !== undefined && s[k] !== '') o[k] = s[k]; });
+      o.locked = !!s.locked;
+      return o;
+    });
+  }
+
+  function load(start) {
+    var end = Dates.addDays(start, GRID_DAYS - 1);
+    return Promise.all([call('api_getPlan', start, end), call('api_getDraft', start)]).then(function (res) {
+      var saved = res[0];
+      var draft = res[1];
+      P = { weekStart: start, dates: Dates.range(start, GRID_DAYS), slots: {}, suggestedOn: {}, usedQueue: [], seen: {}, queue: saved.queue, restored: null, dirty: false, timer: null };
+      (draft ? draft.slots : saved.slots).forEach(function (s) { P.slots[s.date] = clientSlot(s); });
+      if (draft) {
+        P.suggestedOn = (draft.meta && draft.meta.suggested) || {};
+        P.usedQueue = (draft.meta && draft.meta.usedQueue) || [];
+        P.restored = draft.updated_on;
+        if (draft.dropped && draft.dropped.length) UI.toast(draft.dropped.length + ' draft meal(s) were dropped because the dish or restaurant no longer exists.');
+      }
+      draw();
+    }).catch(UI.fail);
+  }
+
+  function setStatus(text) {
+    if (statusEl) statusEl.textContent = text;
+  }
+
+  function markDirty() {
+    P.dirty = true;
+    setStatus('Saving draft...');
+    clearTimeout(P.timer);
+    P.timer = setTimeout(saveDraftNow, 1500);
+  }
+
+  function saveDraftNow() {
+    clearTimeout(P.timer);
+    P.timer = null;
+    return call('api_saveDraft', P.weekStart, cleanSlots(), { suggested: P.suggestedOn, usedQueue: P.usedQueue }).then(function () {
+      var d = new Date();
+      setStatus('Draft saved ' + d.getHours() + ':' + ('0' + d.getMinutes()).slice(-2) + ' (only you can see it until you press Save plan)');
+    }).catch(function (e) { setStatus('Draft not saved: ' + e.message); });
+  }
+
+  function newSlot(date, fields) {
+    var prev = P.slots[date];
+    var s = { plan_id: prev ? prev.plan_id : '', date: date, kind: 'home', dish: '', side_1: '', side_2: '', side_3: '', restaurant: '',
+      servings: '', status: 'planned', locked: true, notes: '', new_dish_name: '', new_restaurant_name: '', _health: null };
+    Object.keys(fields).forEach(function (k) { s[k] = fields[k]; });
+    return s;
+  }
+
+  function pickDishFor(date) {
+    UI.pickDish({ role: 'main', title: 'Pick dinner for ' + UI.dayLabel(date) }).then(function (p) {
+      if (!p) return null;
+      return (p.isNew ? Promise.resolve([]) : UI.defaultSides(p.name)).then(function (sides) {
+        P.slots[date] = newSlot(date, {
+          dish: p.name, new_dish_name: p.isNew ? p.name : '', side_1: sides[0] || '', side_2: sides[1] || '', side_3: sides[2] || ''
+        });
+        delete P.suggestedOn[date];
+        var probe = { date: date, kind: 'home', dry_run: true };
+        if (p.isNew) probe.new_dish_name = p.name; else probe.dish = p.name;
+        return call('api_setSlot', probe).then(function (r) {
+          if (r.warnings && r.warnings.length) UI.toast('Heads-up: ' + r.warnings.join(' • '));
+        }).catch(function () { /* the heads-up is optional */ });
+      }).then(function () { markDirty(); draw(); });
+    }).catch(UI.fail);
+  }
+
+  function pickRestaurantFor(date) {
+    UI.pickRestaurant({ date: date, startWith: 'suggest' }).then(function (p) {
+      if (!p) return;
+      P.slots[date] = newSlot(date, { kind: 'restaurant', restaurant: p.name, new_restaurant_name: p.isNew ? p.name : '' });
+      delete P.suggestedOn[date];
+      markDirty();
+      draw();
+    }).catch(UI.fail);
+  }
+
+  function detailsDialog(s) {
+    var servings = h('input', { type: 'number', min: '1', value: s.servings || '' });
+    var notes = h('input', { type: 'text', value: s.notes || '' });
+    var sides = [s.side_1, s.side_2, s.side_3];
+    var sideBox = h('div');
+    var drawSides = function () {
+      sideBox.innerHTML = '';
+      sides.forEach(function (name, i) {
+        sideBox.appendChild(h('div', { class: 'row' },
+          h('div', { class: 'grow', text: name || 'No side ' + (i + 1) }),
+          h('button', { class: 'btn small', text: name ? 'Change' : 'Choose', onclick: function () {
+            UI.pickDish({ role: 'side', title: 'Pick a side' }).then(function (p) { if (p && !p.isNew) { sides[i] = p.name; drawSides(); } });
+          } }),
+          name ? h('button', { class: 'btn small danger', text: 'Remove', onclick: function () { sides[i] = ''; drawSides(); } }) : null));
+      });
+    };
+    drawSides();
+    UI.dialog('Details for ' + UI.dayLabel(s.date), h('div', null,
+      UI.field('Servings to cook (blank = the recipe\'s servings)', servings), UI.field('Notes', notes), h('h3', { text: 'Side dishes' }), sideBox), {
+      actions: [{ label: 'Save', primary: true, onclick: function (d) {
+        s.servings = servings.value ? Number(servings.value) : '';
+        s.notes = notes.value;
+        s.side_1 = sides[0] || ''; s.side_2 = sides[1] || ''; s.side_3 = sides[2] || '';
+        markDirty();
+        d.close();
+        draw();
+      } }]
+    });
+  }
+
+  function suggest() {
+    var inRange = P.dates.slice(0, planDays());
+    var open = [];
+    var kept = [];
+    P.dates.forEach(function (d) {
+      var s = P.slots[d];
+      var ok = inRange.indexOf(d) >= 0;
+      if (!s) { if (ok) open.push(d); return; }
+      if (s.kind === 'home' && !s.locked && ok) { open.push(d); return; }
+      kept.push(s);
+    });
+    if (!open.length) { UI.toast('Every day is filled or locked. Unlock or clear a day to get new suggestions.'); return; }
+    var exclude = Object.keys(P.seen);
+    open.forEach(function (d) { if (P.slots[d] && P.slots[d].dish) exclude.push(P.slots[d].dish); });
+    var lockedPayload = kept.map(function (s) { return { date: s.date, kind: s.kind, dish: s.dish, restaurant: s.restaurant, status: 'planned' }; });
+    call('api_suggestMeals', open, exclude, lockedPayload, P.dates).then(function (res) {
+      if (!res.suggestions.length && Object.keys(P.seen).length) {
+        P.seen = {};
+        UI.toast('You have seen every dish that fits. Starting over: press Suggest meals again.');
+        return;
+      }
+      res.suggestions.forEach(function (sg) {
+        P.slots[sg.date] = newSlot(sg.date, { dish: sg.dish, side_1: sg.sides[0] || '', side_2: sg.sides[1] || '', side_3: sg.sides[2] || '', locked: false, _health: sg.health });
+        P.suggestedOn[sg.date] = true;
+        P.seen[sg.dish] = true;
+      });
+      if (res.unfilled.length) {
+        UI.toast(res.unfilled.map(function (u) { return UI.dayLabel(u.date) + ': ' + u.reason; }).join(' • '));
+      }
+      markDirty();
+      draw();
+    }).catch(UI.fail);
+  }
+
+  function clearSuggestions() {
+    P.dates.forEach(function (d) {
+      var s = P.slots[d];
+      if (s && s.kind === 'home' && !s.locked) { delete P.slots[d]; delete P.suggestedOn[d]; }
+    });
+    markDirty();
+    draw();
+  }
+
+  function savePlan() {
+    clearTimeout(P.timer);
+    P.timer = null;
+    call('api_savePlan', P.weekStart, cleanSlots(), GRID_DAYS).then(function (res) {
+      var used = P.usedQueue.slice();
+      return Promise.all(used.map(function (id) { return call('api_queueRemove', id).catch(function () { return null; }); })).then(function () { return res; });
+    }).then(function (res) {
+      UI.toast('Plan saved (' + res.saved + ' night' + (res.saved === 1 ? '' : 's') + ')');
+      return load(P.weekStart);
+    }).catch(UI.fail);
+  }
+
+  function changeWeek(delta) {
+    var target = Dates.addDays(P.weekStart, delta);
+    var go = function () { P = null; load(target); };
+    if (P.timer) saveDraftNow().then(go); else go();
+  }
+
+  function dayRow(date, idx) {
+    var s = P.slots[date];
+    var dim = idx >= planDays();
+    var node = h('div', { class: 'card' + (dim ? ' dim' : '') }, h('div', { class: 'day', text: UI.dayLabel(date) + (dim ? ' (outside this plan)' : '') }));
+    if (!s) {
+      node.appendChild(h('div', { class: 'row' },
+        h('button', { class: 'btn', text: 'Pick dish', onclick: function () { pickDishFor(date); } }),
+        h('button', { class: 'btn', text: 'Eat out', onclick: function () { pickRestaurantFor(date); } })));
+      return node;
+    }
+    var isRest = s.kind === 'restaurant';
+    node.appendChild(h('div', { class: 'meal-main', text: isRest ? '🍽 ' + s.restaurant : s.dish }));
+    if (!isRest) {
+      var sides = [s.side_1, s.side_2, s.side_3].filter(Boolean);
+      if (sides.length) node.appendChild(h('div', { class: 'sides', text: 'with ' + sides.join(' • ') }));
+    }
+    node.appendChild(h('div', { class: 'row' },
+      P.suggestedOn[date] && !s.locked ? h('span', { class: 'badge warn', text: 'Suggested' }) : null,
+      s.locked ? h('span', { class: 'badge', text: '🔒 Kept' }) : null,
+      !isRest ? UI.healthBadge(s._health, 'Meal health') : null,
+      s.new_dish_name ? h('span', { class: 'badge warn', text: 'New idea' }) : null));
+    node.appendChild(h('div', { class: 'row' },
+      isRest ? null : h('button', { class: 'btn small', text: s.locked ? 'Unlock' : 'Keep', onclick: function () { s.locked = !s.locked; delete P.suggestedOn[date]; markDirty(); draw(); } }),
+      h('button', { class: 'btn small', text: isRest ? 'Change restaurant' : 'Change dish', onclick: function () { if (isRest) pickRestaurantFor(date); else pickDishFor(date); } }),
+      isRest ? null : h('button', { class: 'btn small', text: 'Sides & servings', onclick: function () { detailsDialog(s); } }),
+      isRest ? null : h('button', { class: 'btn small', text: 'Eat out instead', onclick: function () { pickRestaurantFor(date); } }),
+      h('button', { class: 'btn small danger', text: 'Clear', onclick: function () { delete P.slots[date]; delete P.suggestedOn[date]; markDirty(); draw(); } })));
+    return node;
+  }
+
+  function queueCard() {
+    var items = P.queue.filter(function (q) { return P.usedQueue.indexOf(q.queue_id) < 0; });
+    if (!items.length) return null;
+    var emptyDates = P.dates.filter(function (d) { return !P.slots[d]; });
+    var card = h('div', { class: 'card' }, h('h3', { text: 'Saved for later' }));
+    items.forEach(function (q) {
+      var sel = UI.select(emptyDates.map(function (d) { return { value: d, label: UI.dayLabel(d) }; }), emptyDates[0] || '', null);
+      card.appendChild(h('div', { class: 'row' }, h('div', { class: 'grow', text: q.dish }), sel,
+        h('button', { class: 'btn small', text: 'Put on this day', disabled: !emptyDates.length, onclick: function () {
+          if (!sel.value) return;
+          UI.defaultSides(q.dish).then(function (sides) {
+            P.slots[sel.value] = newSlot(sel.value, { dish: q.dish, side_1: sides[0] || '', side_2: sides[1] || '', side_3: sides[2] || '' });
+            P.usedQueue.push(q.queue_id);
+            markDirty();
+            draw();
+          });
+        } })));
+    });
+    return card;
+  }
+
+  function draw() {
+    container.innerHTML = '';
+    var weekLabel = 'Week of ' + UI.longDate(P.weekStart);
+    container.appendChild(h('div', { class: 'row between' }, h('h2', { text: 'Plan' }),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn small', text: '◀ Earlier', onclick: function () { changeWeek(-7); } }),
+        h('strong', { text: weekLabel }),
+        h('button', { class: 'btn small', text: 'Later ▶', onclick: function () { changeWeek(7); } }))));
+
+    var profile = UI.select(UI.state.boot.profiles, UI.state.boot.activeProfile, function (e) {
+      call('api_setProfile', e.target.value).then(function (r) {
+        UI.state.boot.activeProfile = r.activeProfile;
+        document.getElementById('who').textContent = UI.state.boot.me.name + (r.activeProfile !== 'Normal' ? ' • ' + r.activeProfile : '');
+        UI.toast('Budget mode: ' + r.activeProfile);
+      }).catch(UI.fail);
+    });
+    statusEl = h('div', { class: 'meta', text: P.dirty ? 'Draft not saved yet' : '' });
+    container.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'row' },
+        h('label', { class: 'field grow' }, h('span', { text: 'Budget mode' }), profile),
+        h('button', { class: 'btn primary', text: 'Suggest meals', onclick: suggest }),
+        h('button', { class: 'btn', text: 'Clear suggestions', onclick: clearSuggestions }),
+        h('button', { class: 'btn primary', text: 'Save plan', onclick: savePlan })),
+      statusEl));
+
+    if (P.restored) {
+      container.appendChild(h('div', { class: 'banner row between' },
+        h('span', { text: 'Restored your unsaved draft from ' + String(P.restored).replace('T', ' ') + '.' }),
+        h('button', { class: 'btn small', text: 'Discard draft', onclick: function () {
+          UI.confirmBox('Throw away your draft and go back to the saved plan?', 'Discard').then(function (ok) {
+            if (ok) call('api_clearDraft', P.weekStart).then(function () { load(P.weekStart); }).catch(UI.fail);
+          });
+        } })));
+    }
+
+    P.dates.forEach(function (d, i) { container.appendChild(dayRow(d, i)); });
+    var q = queueCard();
+    if (q) container.appendChild(q);
+  }
+
+  window.addEventListener('beforeunload', function (e) {
+    if (P && P.timer) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  UI.screens.plan = { render: render };
+})();
+</script>
+<script>
+// Dishes: browse, detail, add/edit (with pasted recipes), log a past meal, and the shared dish picker.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var container = null;
+  var listBox = null;
+  var filters = { q: '', role: 'main', type: '', season: '', favorite: false, status: 'visible', minRating: '', minHealth: '', maxMinutes: '' };
+
+  function lookups() { return UI.state.boot.lookups; }
+
+  function badgesFor(r) {
+    return [
+      r.type ? h('span', { class: 'badge', text: r.type }) : null,
+      UI.healthBadge(r.health),
+      r.rating != null ? h('span', { class: 'badge', text: '★ ' + r.rating }) : null,
+      r.favorite ? h('span', { class: 'badge', text: '♥ Favorite' }) : null,
+      r.status === 'idea' ? h('span', { class: 'badge warn', text: 'Idea' }) : null,
+      r.status === 'retired' ? h('span', { class: 'badge', text: 'Retired' }) : null,
+      !r.has_recipe ? h('span', { class: 'badge', text: 'No recipe' }) : null
+    ];
+  }
+
+  UI.defaultSides = function (name) {
+    return call('api_getDish', name).then(function (d) {
+      return d.sides.filter(function (x) { return x.is_default; }).slice(0, 3).map(function (x) { return x.side_dish; });
+    }).catch(function () { return []; });
+  };
+
+  // ---------- picker ----------
+
+  UI.pickDish = function (opts) {
+    var o = opts || {};
+    return new Promise(function (resolve) {
+      var f = { q: '', type: '', favorite: false, role: o.role || 'main', status: 'usable' };
+      var done = false;
+      var list = h('div');
+      var finish = function (value) { done = true; resolve(value); dlg.close(); };
+      var load = function () {
+        call('api_listDishes', f).then(function (rows) {
+          list.innerHTML = '';
+          if (!rows.length) list.appendChild(h('div', { class: 'empty', text: 'No dishes match.' }));
+          rows.forEach(function (r) {
+            list.appendChild(h('div', { class: 'list-item', onclick: function () { finish({ name: r.name, isNew: false }); } },
+              h('div', { class: 'grow' }, h('strong', { text: r.name }),
+                h('div', { class: 'meta', text: r.last_cooked ? 'Last made ' + r.last_cooked : 'Not made yet' })),
+              badgesFor(r)));
+          });
+        }).catch(UI.fail);
+      };
+      var search = h('input', { type: 'text', placeholder: 'Search by name', oninput: function (e) { f.q = e.target.value; load(); } });
+      var typeSel = UI.select(lookups().types, '', function (e) { f.type = e.target.value; load(); }, 'Any type');
+      var fav = h('input', { type: 'checkbox', onchange: function (e) { f.favorite = e.target.checked; load(); } });
+      var idea = h('input', { type: 'text', placeholder: 'Or type a new dish idea' });
+      var body = h('div', null,
+        h('div', { class: 'grid2' }, search, typeSel, h('label', { class: 'check' }, fav, 'Favorites only')),
+        list,
+        h('div', { class: 'row' }, h('div', { class: 'grow' }, idea),
+          h('button', { class: 'btn primary', text: 'Use this idea', onclick: function () {
+            var name = idea.value.trim();
+            if (!name) return;
+            finish({ name: name, isNew: true });
+          } })));
+      var dlg = UI.dialog(o.title || 'Pick a dish', body, { wide: true, onclose: function () { if (!done) resolve(null); } });
+      load();
+      setTimeout(function () { search.focus(); }, 50);
+    });
+  };
+
+  // ---------- list ----------
+
+  function render(c) {
+    container = c;
+    showList();
+  }
+
+  function showList() {
+    container.innerHTML = '';
+    var lk = lookups();
+    var reload = function () { loadList(); };
+    container.appendChild(h('div', { class: 'row between' },
+      h('h2', { text: 'Dishes' }),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn primary', text: 'Add dish', onclick: function () { openForm(null); } }),
+        h('button', { class: 'btn', text: 'Log a past meal', onclick: logPastMeal }))));
+    var search = h('input', { type: 'text', placeholder: 'Search dishes', value: filters.q, oninput: function (e) { filters.q = e.target.value; reload(); } });
+    var role = UI.select([{ value: 'main', label: 'Main dishes' }, { value: 'side', label: 'Side dishes' }], filters.role, function (e) { filters.role = e.target.value; reload(); }, 'Mains and sides');
+    var type = UI.select(lk.types, filters.type, function (e) { filters.type = e.target.value; reload(); }, 'Any type');
+    var season = UI.select(lk.seasons, filters.season, function (e) { filters.season = e.target.value; reload(); }, 'Any season');
+    var rating = UI.select([{ value: '3', label: '3★ and up' }, { value: '4', label: '4★ and up' }], filters.minRating, function (e) { filters.minRating = e.target.value; reload(); }, 'Any rating');
+    var health = UI.select([{ value: '6', label: 'Health 6+' }, { value: '8', label: 'Health 8+' }], filters.minHealth, function (e) { filters.minHealth = e.target.value; reload(); }, 'Any health');
+    var time = UI.select([{ value: '30', label: '30 min or less' }, { value: '45', label: '45 min or less' }, { value: '60', label: '60 min or less' }], filters.maxMinutes, function (e) { filters.maxMinutes = e.target.value; reload(); }, 'Any time');
+    var fav = h('input', { type: 'checkbox', checked: filters.favorite, onchange: function (e) { filters.favorite = e.target.checked; reload(); } });
+    var ideas = h('input', { type: 'checkbox', checked: filters.status === 'idea', onchange: function (e) { filters.status = e.target.checked ? 'idea' : 'visible'; reload(); } });
+    container.appendChild(h('div', { class: 'card' }, search,
+      h('div', { class: 'grid2' }, role, type, season, rating, health, time),
+      h('label', { class: 'check' }, fav, 'Favorites'), h('label', { class: 'check' }, ideas, 'Ideas only')));
+    listBox = h('div', { class: 'card' });
+    container.appendChild(listBox);
+    container.appendChild(h('div', { class: 'row no-print' },
+      h('button', { class: 'btn small', text: 'Recalculate healthy scores', onclick: function () {
+        call('api_recalculateHealth').then(function (r) {
+          UI.toast(r.changed ? r.changed + ' dish score' + (r.changed === 1 ? '' : 's') + ' updated' : 'All healthy scores are already up to date');
+          loadList();
+        }).catch(UI.fail);
+      } }),
+      h('span', { class: 'meta', text: 'Use after changing points in cfg_health_rules.' })));
+    loadList();
+  }
+
+  function loadList() {
+    return call('api_listDishes', filters).then(function (rows) {
+      if (!listBox) return;
+      listBox.innerHTML = '';
+      if (!rows.length) {
+        listBox.appendChild(h('div', { class: 'empty', text: 'No dishes yet. Use "Add dish" to enter your first one.' }));
+        return;
+      }
+      rows.forEach(function (r) {
+        listBox.appendChild(h('div', { class: 'list-item', onclick: function () { showDetail(r.name); } },
+          h('div', { class: 'grow' }, h('strong', { text: r.name }),
+            h('div', { class: 'meta', text: (r.last_cooked ? 'Last made ' + r.last_cooked : 'Not made yet') + (r.minutes ? ' • ' + r.minutes + ' min' : '') })),
+          badgesFor(r)));
+      });
+    }).catch(UI.fail);
+  }
+
+  // ---------- detail ----------
+
+  function showDetail(name) {
+    call('api_getDish', name).then(drawDetail).catch(UI.fail);
+  }
+
+  function ingredientText(l) {
+    var text = [l.qty_text, l.unit, l.ingredient].filter(function (x) { return x !== '' && x != null; }).join(' ');
+    if (l.prep_note) text += ', ' + l.prep_note;
+    if (l.optional) text += ' (optional)';
+    return text;
+  }
+
+  function drawDetail(d) {
+    container.innerHTML = '';
+    var dish = d.dish;
+    var refresh = function () { showDetail(dish.name); };
+    container.appendChild(h('button', { class: 'btn small', text: '← All dishes', onclick: showList }));
+
+    var meta = [dish.role === 'side' ? 'Side dish' : 'Main dish', dish.type, dish.cuisine,
+      dish.servings ? 'Serves ' + dish.servings : '', (dish.prep_min || dish.cook_min) ? 'Prep ' + (dish.prep_min || 0) + ' • Cook ' + (dish.cook_min || 0) + ' min' : '',
+      dish.source ? 'From ' + dish.source : ''].filter(Boolean).join(' • ');
+    container.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'row between' }, h('h2', { text: dish.name }),
+        h('button', { class: 'btn', text: dish.favorite ? '♥ Favorite' : '♡ Make favorite', onclick: function () {
+          call('api_setFavorite', 'dish', dish.name, !dish.favorite).then(refresh).catch(UI.fail);
+        } })),
+      h('div', { class: 'meta', text: meta }),
+      h('div', { class: 'row' }, UI.healthBadge(dish.healthy_score),
+        dish.status !== 'active' ? h('span', { class: 'badge warn', text: dish.status }) : null,
+        d.seasons.map(function (s) { return h('span', { class: 'badge', text: s }); }),
+        d.tags.map(function (t) { return h('span', { class: 'badge', text: '#' + t }); })),
+      h('div', { class: 'row' }, h('span', { text: 'Your rating' }),
+        UI.stars(d.rating.mine, function (n) { call('api_rate', 'dish', dish.name, n).then(refresh).catch(UI.fail); }),
+        h('span', { class: 'meta', text: d.rating.count ? 'Average ' + d.rating.avg + ' from ' + d.rating.count : 'Not rated yet' })),
+      h('div', { class: 'row no-print' },
+        h('button', { class: 'btn', text: 'Edit', onclick: function () { openForm(d); } }),
+        h('button', { class: 'btn', text: 'Rename', onclick: function () {
+          UI.promptBox('Rename dish', 'New name', dish.name).then(function (n) {
+            if (!n || n === dish.name) return null;
+            return call('api_renameItem', 'lib_dishes', dish.name, n).then(function (r) {
+              UI.toast('Renamed in ' + r.count + ' place' + (r.count === 1 ? '' : 's'));
+              showDetail(n);
+            });
+          }).catch(UI.fail);
+        } }),
+        dish.status !== 'retired' ? h('button', { class: 'btn danger', text: 'Retire', onclick: function () {
+          UI.confirmBox('Retire "' + dish.name + '"? It stays in your history but is no longer suggested.', 'Retire').then(function (ok) {
+            if (ok) call('api_retireDish', dish.name).then(refresh).catch(UI.fail);
+          });
+        } }) : null)));
+
+    if (d.sides.length) {
+      container.appendChild(h('div', { class: 'card' }, h('h3', { text: 'Goes well with' }),
+        d.sides.map(function (s) { return h('div', { text: s.side_dish + (s.is_default ? ' (usual side)' : '') }); })));
+    }
+
+    var rc = h('div', { class: 'card' }, h('h3', { text: 'Recipe' }));
+    if (dish.intro_notes) rc.appendChild(h('p', { class: 'meta', text: dish.intro_notes }));
+    if (!d.recipe.ingredients.length && !d.recipe.steps.length) {
+      rc.appendChild(h('div', { class: 'empty', text: 'No recipe yet. Use Edit to add one.' }));
+    } else {
+      Recipe.groupByLabel(d.recipe.ingredients).forEach(function (g) {
+        if (g.label) rc.appendChild(h('h3', { text: g.label }));
+        g.lines.forEach(function (l) { rc.appendChild(h('div', { text: '• ' + ingredientText(l) })); });
+      });
+      if (d.recipe.steps.length) rc.appendChild(h('h3', { text: 'Directions' }));
+      var section = null;
+      d.recipe.steps.forEach(function (st) {
+        if (st.section_label && st.section_label !== section) { section = st.section_label; rc.appendChild(h('h3', { text: section })); }
+        rc.appendChild(h('p', { text: st.step_no + '. ' + st.text + (st.timer_min ? ' (' + st.timer_min + ' min)' : '') }));
+      });
+    }
+    container.appendChild(rc);
+
+    var box = h('textarea', { placeholder: 'Add a comment' });
+    var cc = h('div', { class: 'card' }, h('h3', { text: 'Comments' }));
+    if (!d.comments.length) cc.appendChild(h('div', { class: 'meta', text: 'No comments yet.' }));
+    d.comments.forEach(function (c) { cc.appendChild(h('p', null, h('strong', { text: c.member + ' ' }), h('span', { class: 'meta', text: c.date }), h('br'), c.text)); });
+    cc.appendChild(box);
+    cc.appendChild(h('div', { class: 'actions' }, h('button', { class: 'btn primary', text: 'Add comment', onclick: function () {
+      call('api_addComment', 'dish', dish.name, box.value).then(refresh).catch(UI.fail);
+    } })));
+    container.appendChild(cc);
+
+    container.appendChild(h('div', { class: 'card' }, h('h3', { text: 'History' }),
+      d.history.length ? d.history.map(function (x) { return h('div', { text: UI.longDate(x.date) + (x.status === 'cooked' ? ' ✓' : '') }); })
+        : h('div', { class: 'meta', text: 'Not on the plan yet.' })));
+  }
+
+  // ---------- add / edit form ----------
+
+  function emptyForm() {
+    return { original_name: '', name: '', role: 'main', type: '', cuisine: '', cook_method: '', servings: '', prep_min: '', cook_min: '',
+      source: '', intro_notes: '', status: 'idea', favorite: false, seasons: [], tags: [], sides: [], ingredients: [], steps: [], paste: '', warnings: [] };
+  }
+
+  function formFromDetail(d) {
+    var dish = d.dish;
+    return {
+      original_name: dish.name, name: dish.name, role: dish.role, type: dish.type, cuisine: dish.cuisine, cook_method: dish.cook_method,
+      servings: dish.servings == null ? '' : dish.servings, prep_min: dish.prep_min == null ? '' : dish.prep_min,
+      cook_min: dish.cook_min == null ? '' : dish.cook_min, source: dish.source, intro_notes: dish.intro_notes, status: dish.status,
+      favorite: dish.favorite, seasons: d.seasons.slice(), tags: d.tags.slice(),
+      sides: d.sides.map(function (s) { return { side_dish: s.side_dish, is_default: s.is_default }; }),
+      ingredients: d.recipe.ingredients.map(function (l) {
+        return { qty_text: l.qty_text, unit: l.unit, ingredient: l.ingredient, prep_note: l.prep_note, group_label: l.group_label, optional: l.optional };
+      }),
+      steps: d.recipe.steps.map(function (st) { return { section_label: st.section_label, text: st.text, timer_min: st.timer_min == null ? '' : st.timer_min }; }),
+      paste: '', warnings: []
+    };
+  }
+
+  UI.editDish = function (name) {
+    UI.show('dishes');
+    call('api_getDish', name).then(function (d) { openForm(d); }).catch(UI.fail);
+  };
+
+  function openForm(detail) {
+    var f = detail ? formFromDetail(detail) : emptyForm();
+    call('api_listDishes', { role: 'side', status: 'usable' }).then(function (sides) {
+      drawForm(f, sides.map(function (s) { return s.name; }));
+    }).catch(UI.fail);
+  }
+
+  function text(f, key, label, type) {
+    return UI.field(label, h('input', { type: type || 'text', value: f[key] == null ? '' : f[key], oninput: function (e) { f[key] = e.target.value; } }));
+  }
+
+  function drawForm(f, sideNames) {
+    var lk = lookups();
+    var redraw = function () { drawForm(f, sideNames); };
+    container.innerHTML = '';
+    container.appendChild(h('button', { class: 'btn small', text: '← Cancel', onclick: function () { if (f.original_name) showDetail(f.original_name); else showList(); } }));
+    container.appendChild(h('h2', { text: f.original_name ? 'Edit ' + f.original_name : 'Add a dish' }));
+
+    var basics = h('div', { class: 'card' },
+      text(f, 'name', 'Dish name'),
+      h('div', { class: 'grid2' },
+        UI.field('Main or side', UI.select([{ value: 'main', label: 'Main dish' }, { value: 'side', label: 'Side dish' }], f.role, function (e) { f.role = e.target.value; redraw(); })),
+        UI.field('Type', UI.select(lk.types, f.type, function (e) { f.type = e.target.value; }, '')),
+        UI.field('Cuisine', UI.select(lk.cuisines, f.cuisine, function (e) { f.cuisine = e.target.value; }, '')),
+        UI.field('How it is cooked', UI.select(lk.cookMethods, f.cook_method, function (e) { f.cook_method = e.target.value; }, '')),
+        text(f, 'servings', 'Servings the recipe makes', 'number'),
+        text(f, 'prep_min', 'Prep minutes', 'number'),
+        text(f, 'cook_min', 'Cook minutes', 'number'),
+        UI.field('Status', UI.select([{ value: 'idea', label: 'Idea (not tried yet)' }, { value: 'active', label: 'Active' }, { value: 'retired', label: 'Retired' }], f.status, function (e) { f.status = e.target.value; }))),
+      text(f, 'source', 'Where the recipe came from'),
+      UI.field('Tips and notes', h('textarea', { value: f.intro_notes, oninput: function (e) { f.intro_notes = e.target.value; } })),
+      h('div', { class: 'meta', text: 'Seasons (leave all unticked for year-round)' }),
+      lk.seasons.map(function (s) {
+        return h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.seasons.indexOf(s) >= 0, onchange: function (e) {
+          f.seasons = f.seasons.filter(function (x) { return x !== s; });
+          if (e.target.checked) f.seasons.push(s);
+        } }), s);
+      }),
+      lk.tags.length ? h('div', { class: 'meta', text: 'Tags' }) : null,
+      lk.tags.map(function (t) {
+        return h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: f.tags.indexOf(t) >= 0, onchange: function (e) {
+          f.tags = f.tags.filter(function (x) { return x !== t; });
+          if (e.target.checked) f.tags.push(t);
+        } }), t);
+      }));
+    container.appendChild(basics);
+
+    if (f.role === 'main') {
+      var sidesCard = h('div', { class: 'card' }, h('h3', { text: 'Side dishes that go with it' }));
+      f.sides.forEach(function (s, i) {
+        sidesCard.appendChild(h('div', { class: 'row' },
+          h('div', { class: 'grow' }, UI.select(sideNames, s.side_dish, function (e) { s.side_dish = e.target.value; }, 'Choose a side')),
+          h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: s.is_default, onchange: function (e) { s.is_default = e.target.checked; } }), 'Usual side'),
+          h('button', { class: 'btn small danger', type: 'button', text: 'Remove', onclick: function () { f.sides.splice(i, 1); redraw(); } })));
+      });
+      sidesCard.appendChild(h('button', { class: 'btn small', type: 'button', text: 'Add a side', onclick: function () { f.sides.push({ side_dish: '', is_default: true }); redraw(); } }));
+      if (!sideNames.length) sidesCard.appendChild(h('div', { class: 'meta', text: 'No side dishes exist yet. Add a dish with "Side dish" selected first.' }));
+      container.appendChild(sidesCard);
+    }
+
+    var paste = h('textarea', { placeholder: 'Paste a whole recipe here: title, Ingredients, Directions...', value: f.paste, oninput: function (e) { f.paste = e.target.value; } });
+    var pasteCard = h('div', { class: 'card' }, h('h3', { text: 'Paste a recipe' }), paste,
+      h('div', { class: 'actions' }, h('button', { class: 'btn', type: 'button', text: 'Read pasted recipe', onclick: function () {
+        call('api_parseRecipeText', f.paste).then(function (r) {
+          if (r.title && !f.name) f.name = r.title;
+          if (r.servings != null) f.servings = r.servings;
+          if (r.prep_min != null) f.prep_min = r.prep_min;
+          if (r.cook_min != null) f.cook_min = r.cook_min;
+          if (r.ingredients.length) {
+            f.ingredients = r.ingredients.map(function (l) {
+              return { qty_text: l.qty_text, unit: l.unit, ingredient: l.name, prep_note: l.prep_note, group_label: l.group_label, optional: l.optional };
+            });
+          }
+          if (r.steps.length) {
+            f.steps = r.steps.map(function (st) { return { section_label: st.section_label, text: st.text, timer_min: st.timer_min == null ? '' : st.timer_min }; });
+          }
+          f.warnings = r.warnings;
+          redraw();
+        }).catch(UI.fail);
+      } })));
+    if (f.warnings.length) {
+      pasteCard.appendChild(h('div', { class: 'banner' }, h('strong', { text: 'Please check:' }), f.warnings.map(function (w) { return h('div', { text: '• ' + w }); })));
+    }
+    container.appendChild(pasteCard);
+
+    var listUnits = h('datalist', { id: 'dl-units' }, lk.units.map(function (u) { return h('option', { value: u }); }));
+    var listIngs = h('datalist', { id: 'dl-ings' }, lk.ingredients.map(function (u) { return h('option', { value: u }); }));
+    var ingCard = h('div', { class: 'card' }, h('h3', { text: 'Ingredients' }), listUnits, listIngs,
+      h('div', { class: 'meta', text: 'Amount, unit, ingredient, note. Leave the amount blank for things like "salt, to taste".' }));
+    f.ingredients.forEach(function (l, i) {
+      ingCard.appendChild(h('div', { class: 'edit-row' },
+        h('input', { type: 'text', placeholder: 'Amount', value: l.qty_text, oninput: function (e) { l.qty_text = e.target.value; } }),
+        h('input', { type: 'text', placeholder: 'Unit', list: 'dl-units', value: l.unit, oninput: function (e) { l.unit = e.target.value; } }),
+        h('input', { type: 'text', placeholder: 'Ingredient', list: 'dl-ings', value: l.ingredient, oninput: function (e) { l.ingredient = e.target.value; } }),
+        h('input', { type: 'text', placeholder: 'Note (chopped...)', value: l.prep_note, oninput: function (e) { l.prep_note = e.target.value; } }),
+        h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: l.optional, onchange: function (e) { l.optional = e.target.checked; } }), 'Optional'),
+        h('button', { class: 'btn small danger', type: 'button', text: '✕', 'aria-label': 'Remove', onclick: function () { f.ingredients.splice(i, 1); redraw(); } })));
+      ingCard.appendChild(h('input', { type: 'text', placeholder: 'Group heading (optional), e.g. For the sauce', value: l.group_label, oninput: function (e) { l.group_label = e.target.value; } }));
+    });
+    ingCard.appendChild(h('button', { class: 'btn small', type: 'button', text: 'Add ingredient', onclick: function () {
+      f.ingredients.push({ qty_text: '', unit: '', ingredient: '', prep_note: '', group_label: '', optional: false }); redraw();
+    } }));
+    container.appendChild(ingCard);
+
+    var stepCard = h('div', { class: 'card' }, h('h3', { text: 'Directions' }));
+    f.steps.forEach(function (st, i) {
+      stepCard.appendChild(h('div', { class: 'step-row' },
+        h('div', null,
+          h('input', { type: 'text', placeholder: 'Section heading (optional)', value: st.section_label, oninput: function (e) { st.section_label = e.target.value; } }),
+          h('textarea', { placeholder: 'Step ' + (i + 1), value: st.text, oninput: function (e) { st.text = e.target.value; } })),
+        h('input', { type: 'number', placeholder: 'Timer min', value: st.timer_min, oninput: function (e) { st.timer_min = e.target.value; } }),
+        h('div', { class: 'row' },
+          h('button', { class: 'btn small', type: 'button', text: '↑', onclick: function () { if (i > 0) { f.steps.splice(i - 1, 0, f.steps.splice(i, 1)[0]); redraw(); } } }),
+          h('button', { class: 'btn small', type: 'button', text: '↓', onclick: function () { if (i < f.steps.length - 1) { f.steps.splice(i + 1, 0, f.steps.splice(i, 1)[0]); redraw(); } } }),
+          h('button', { class: 'btn small danger', type: 'button', text: '✕', 'aria-label': 'Remove', onclick: function () { f.steps.splice(i, 1); redraw(); } }))));
+    });
+    stepCard.appendChild(h('button', { class: 'btn small', type: 'button', text: 'Add step', onclick: function () {
+      f.steps.push({ section_label: '', text: '', timer_min: '' }); redraw();
+    } }));
+    container.appendChild(stepCard);
+
+    container.appendChild(h('div', { class: 'actions' },
+      h('button', { class: 'btn primary', text: 'Save dish', onclick: function () { save(f); } })));
+  }
+
+  function save(f) {
+    if (!f.name.trim()) { UI.toast('Please enter a dish name.', true); return; }
+    var payload = {
+      original_name: f.original_name, name: f.name.trim(), role: f.role, type: f.type, cuisine: f.cuisine, cook_method: f.cook_method,
+      servings: f.servings, prep_min: f.prep_min, cook_min: f.cook_min, source: f.source, intro_notes: f.intro_notes,
+      status: f.status, seasons: f.seasons, tags: f.tags, favorite: f.favorite
+    };
+    if (f.role === 'main') payload.sides = f.sides;
+    var hasRecipe = f.ingredients.some(function (l) { return l.ingredient.trim(); }) || f.steps.some(function (s) { return s.text.trim(); });
+    call('api_saveDish', payload).then(function (res) {
+      if (!hasRecipe && !f.original_name) return res;
+      return call('api_saveRecipe', res.name, {
+        servings: f.servings, prep_min: f.prep_min, cook_min: f.cook_min, intro_notes: f.intro_notes,
+        ingredients: f.ingredients, steps: f.steps
+      }).then(function (r) {
+        if (r.new_ingredients.length) UI.toast('New ingredients added: ' + r.new_ingredients.join(', ') + '. Set their store aisle on the shopping list.');
+        return res;
+      });
+    }).then(function (res) {
+      UI.toast('Saved ' + res.name);
+      showDetail(res.name);
+    }).catch(UI.fail);
+  }
+
+  // ---------- log a past meal ----------
+
+  function logPastMeal() {
+    var entry = { kind: 'home', name: '', isNew: false };
+    var date = h('input', { type: 'date', max: UI.state.today, value: Dates.addDays(UI.state.today, -1) });
+    var chosen = h('div', { class: 'meta', text: 'Nothing chosen yet' });
+    var kindRow = h('div', { class: 'row' });
+    var drawKind = function () {
+      kindRow.innerHTML = '';
+      [['home', 'Cooked at home'], ['restaurant', 'Ate out']].forEach(function (k) {
+        kindRow.appendChild(h('label', { class: 'check' }, h('input', { type: 'radio', name: 'pastkind', checked: entry.kind === k[0], onchange: function () {
+          entry.kind = k[0]; entry.name = ''; chosen.textContent = 'Nothing chosen yet';
+        } }), k[1]));
+      });
+    };
+    drawKind();
+    var body = h('div', null, UI.field('Date', date), kindRow,
+      h('button', { class: 'btn', text: 'Choose...', onclick: function () {
+        var picker = entry.kind === 'home' ? UI.pickDish({ role: 'main', title: 'Which dish?' }) : UI.pickRestaurant({ date: date.value });
+        picker.then(function (p) {
+          if (!p) return;
+          entry.name = p.name; entry.isNew = p.isNew;
+          chosen.textContent = p.name + (p.isNew ? ' (new)' : '');
+        });
+      } }), chosen);
+    UI.dialog('Log a past meal', body, { actions: [{ label: 'Save', primary: true, onclick: function (d) {
+      if (!entry.name || !date.value) { UI.toast('Pick a date and a ' + (entry.kind === 'home' ? 'dish' : 'restaurant') + '.', true); return; }
+      var payload = { date: date.value, kind: entry.kind };
+      if (entry.kind === 'home') { if (entry.isNew) payload.new_dish_name = entry.name; else payload.dish = entry.name; }
+      else if (entry.isNew) payload.new_restaurant_name = entry.name; else payload.restaurant = entry.name;
+      call('api_logPastMeal', payload).then(function () { d.close(); UI.toast('Meal logged'); loadList(); }).catch(UI.fail);
+    } }] });
+  }
+
+  UI.screens.dishes = { render: render, refresh: function () { if (listBox && listBox.isConnected) loadList(); } };
+})();
+</script>
+<script>
+// Restaurants: history, ratings, comments, Suggest 5, plus the shared restaurant picker and eat-out dialog.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var container = null;
+  var listBox = null;
+  var filters = { q: '', cuisine: '', favorite: false };
+
+  function price(level) { return level ? '$$$$'.slice(0, Number(level)) : ''; }
+
+  function badges(r) {
+    return [
+      r.cuisine ? h('span', { class: 'badge', text: r.cuisine }) : null,
+      r.price_level ? h('span', { class: 'badge', text: price(r.price_level) }) : null,
+      r.rating != null ? h('span', { class: 'badge', text: '★ ' + r.rating }) : null,
+      r.favorite ? h('span', { class: 'badge', text: '♥' }) : null
+    ];
+  }
+
+  function lastVisitText(r) {
+    return r.last_visit ? 'Last visit ' + r.last_visit + ' • ' + r.visit_count + ' visit' + (r.visit_count === 1 ? '' : 's') : 'Never visited';
+  }
+
+  // ---------- picker (list, Suggest 5, add new) ----------
+
+  // opts: { date, startWith: 'list' | 'suggest' } -> Promise of { name, isNew, cuisine } or null
+  UI.pickRestaurant = function (opts) {
+    var o = opts || {};
+    return new Promise(function (resolve) {
+      var done = false;
+      var shown = [];
+      var body = h('div');
+      var dlg = null;
+      var finish = function (v) { done = true; resolve(v); dlg.close(); };
+
+      var row = function (r) {
+        return h('div', { class: 'list-item', onclick: function () { finish({ name: r.name, isNew: false }); } },
+          h('div', { class: 'grow' }, h('strong', { text: r.name }), h('div', { class: 'meta', text: lastVisitText(r) })), badges(r));
+      };
+
+      var newBox = function () {
+        var name = h('input', { type: 'text', placeholder: 'Type a new restaurant' });
+        var cuisine = UI.select(UI.state.boot.lookups.cuisines, '', null, 'Cuisine');
+        return h('div', { class: 'card' }, h('div', { class: 'meta', text: 'Not on the list?' }),
+          h('div', { class: 'row' }, h('div', { class: 'grow' }, name), h('div', null, cuisine),
+            h('button', { class: 'btn primary', text: 'Use it', onclick: function () {
+              if (!name.value.trim()) return;
+              finish({ name: name.value.trim(), isNew: true, cuisine: cuisine.value });
+            } })));
+      };
+
+      var drawList = function () {
+        body.innerHTML = '';
+        var list = h('div');
+        var all = [];
+        var search = h('input', { type: 'text', placeholder: 'Search restaurants', oninput: function () { paint(); } });
+        var paint = function () {
+          var q = search.value.trim().toLowerCase();
+          list.innerHTML = '';
+          var rows = all.filter(function (r) { return !q || r.name.toLowerCase().indexOf(q) >= 0; });
+          if (!rows.length) list.appendChild(h('div', { class: 'empty', text: all.length ? 'No match.' : 'No restaurants yet. Add one below.' }));
+          rows.forEach(function (r) { list.appendChild(row(r)); });
+        };
+        body.appendChild(h('div', { class: 'row' }, h('div', { class: 'grow' }, search),
+          h('button', { class: 'btn primary', text: 'Suggest 5', onclick: function () { shown = []; drawSuggest(); } })));
+        body.appendChild(list);
+        body.appendChild(newBox());
+        call('api_listRestaurants').then(function (rows) { all = rows; paint(); }).catch(UI.fail);
+      };
+
+      var drawSuggest = function () {
+        call('api_suggestRestaurants', o.date || UI.state.today, shown).then(function (res) {
+          body.innerHTML = '';
+          if (!res.restaurants.length) {
+            body.appendChild(h('div', { class: 'empty', text: shown.length ? "That's every restaurant. Add a new one below." : 'No restaurants to suggest yet. Add one below.' }));
+          } else {
+            body.appendChild(h('h3', { text: 'How about one of these?' }));
+            res.restaurants.forEach(function (r) { shown.push(r.name); body.appendChild(row(r)); });
+          }
+          body.appendChild(h('div', { class: 'row' },
+            res.exhausted ? null : h('button', { class: 'btn', text: 'Show 5 more', onclick: drawSuggest }),
+            h('button', { class: 'btn', text: 'Back to the list', onclick: drawList })));
+          body.appendChild(newBox());
+        }).catch(UI.fail);
+      };
+
+      dlg = UI.dialog('Pick a restaurant', body, { wide: true, onclose: function () { if (!done) resolve(null); } });
+      if (o.startWith === 'suggest') drawSuggest(); else drawList();
+    });
+  };
+
+  // ---------- eat-out dialog ----------
+
+  // opts: { date, restaurant: {name,isNew,cuisine}, onDone }
+  UI.eatOutDialog = function (opts) {
+    var o = opts || {};
+    var st = { date: o.date || UI.state.today, restaurant: o.restaurant || null, occupied: null, action: 'queue', moveTo: '', ifOccupied: 'swap' };
+    var chosen = h('div', { class: 'meta', text: st.restaurant ? st.restaurant.name : 'No restaurant chosen yet' });
+    var originalBox = h('div');
+
+    var drawOriginal = function () {
+      originalBox.innerHTML = '';
+      if (!st.occupied) return;
+      var what = st.occupied.kind === 'restaurant' ? st.occupied.restaurant : st.occupied.dish;
+      originalBox.appendChild(h('div', { class: 'banner' }, 'Already planned that night: ' + what + '. What should happen to it?'));
+      [['queue', 'Save it for next week'], ['move', 'Move it to another day'], ['delete', 'Remove it']].forEach(function (a) {
+        originalBox.appendChild(h('label', { class: 'check' }, h('input', { type: 'radio', name: 'orig', checked: st.action === a[0], onchange: function () { st.action = a[0]; drawOriginal(); } }), a[1]));
+        originalBox.appendChild(h('br'));
+      });
+      if (st.action === 'move') {
+        if (!st.moveTo) st.moveTo = Dates.addDays(st.date, 1);
+        originalBox.appendChild(UI.field('Move it to', h('input', { type: 'date', value: st.moveTo, onchange: function (e) { st.moveTo = e.target.value; } })));
+        originalBox.appendChild(UI.field('If that day already has a meal', UI.select([
+          { value: 'swap', label: 'Swap with it' }, { value: 'shift', label: 'Push the other meals one day later' },
+          { value: 'queue_existing', label: 'Save that meal for next week' }, { value: 'delete_existing', label: 'Remove that meal' }
+        ], st.ifOccupied, function (e) { st.ifOccupied = e.target.value; })));
+      }
+    };
+
+    var checkOccupied = function () {
+      call('api_getPlan', st.date, st.date).then(function (r) { st.occupied = r.slots[0] || null; drawOriginal(); }).catch(UI.fail);
+    };
+
+    var dateIn = h('input', { type: 'date', value: st.date, onchange: function (e) { st.date = e.target.value; st.moveTo = ''; checkOccupied(); } });
+    var body = h('div', null, UI.field('Night', dateIn),
+      h('button', { class: 'btn', text: 'Choose restaurant...', onclick: function () {
+        UI.pickRestaurant({ date: st.date, startWith: 'suggest' }).then(function (p) {
+          if (p) { st.restaurant = p; chosen.textContent = p.name + (p.isNew ? ' (new)' : ''); }
+        });
+      } }), chosen, originalBox);
+    UI.dialog('Eat out', body, { actions: [{ label: 'Plan it', primary: true, onclick: function (d) {
+      if (!st.restaurant) { UI.toast('Choose a restaurant first.', true); return; }
+      if (!st.date) { UI.toast('Pick a night.', true); return; }
+      var ref = st.restaurant.isNew ? { new_name: st.restaurant.name, cuisine: st.restaurant.cuisine } : { name: st.restaurant.name };
+      var action = null;
+      if (st.occupied) {
+        action = { type: st.action };
+        if (st.action === 'move') { action.to = st.moveTo; action.ifOccupied = st.ifOccupied; }
+      }
+      call('api_eatOut', st.date, ref, action).then(function (r) {
+        d.close();
+        if (r.notes && r.notes.length) UI.toast(r.notes.join(' '));
+        UI.toast('Eating at ' + r.restaurant + ' on ' + UI.dayLabel(st.date));
+        if (o.onDone) o.onDone();
+      }).catch(UI.fail);
+    } }] });
+    checkOccupied();
+  };
+
+  // ---------- list ----------
+
+  function render(c) {
+    container = c;
+    showList();
+  }
+
+  function showList() {
+    container.innerHTML = '';
+    var reload = function () { loadList(); };
+    container.appendChild(h('div', { class: 'row between' }, h('h2', { text: 'Restaurants' }),
+      h('div', { class: 'row' },
+        h('button', { class: 'btn primary', text: 'Suggest 5', onclick: function () {
+          UI.pickRestaurant({ date: UI.state.today, startWith: 'suggest' }).then(function (p) {
+            if (p) UI.eatOutDialog({ restaurant: p, date: UI.state.today, onDone: function () { UI.show('week'); } });
+          });
+        } }),
+        h('button', { class: 'btn', text: 'Add restaurant', onclick: function () { openForm(null); } }))));
+    container.appendChild(h('div', { class: 'card' },
+      h('input', { type: 'text', placeholder: 'Search restaurants', value: filters.q, oninput: function (e) { filters.q = e.target.value; reload(); } }),
+      h('div', { class: 'grid2' }, UI.select(UI.state.boot.lookups.cuisines, filters.cuisine, function (e) { filters.cuisine = e.target.value; reload(); }, 'Any cuisine')),
+      h('label', { class: 'check' }, h('input', { type: 'checkbox', checked: filters.favorite, onchange: function (e) { filters.favorite = e.target.checked; reload(); } }), 'Favorites')));
+    listBox = h('div', { class: 'card' });
+    container.appendChild(listBox);
+    loadList();
+  }
+
+  function loadList() {
+    return call('api_listRestaurants').then(function (rows) {
+      if (!listBox) return;
+      var q = filters.q.trim().toLowerCase();
+      rows = rows.filter(function (r) {
+        return (!q || r.name.toLowerCase().indexOf(q) >= 0) && (!filters.cuisine || r.cuisine === filters.cuisine) && (!filters.favorite || r.favorite);
+      });
+      listBox.innerHTML = '';
+      if (!rows.length) { listBox.appendChild(h('div', { class: 'empty', text: 'No restaurants yet. Use "Add restaurant".' })); return; }
+      rows.forEach(function (r) {
+        listBox.appendChild(h('div', { class: 'list-item', onclick: function () { showDetail(r.name); } },
+          h('div', { class: 'grow' }, h('strong', { text: r.name }), h('div', { class: 'meta', text: lastVisitText(r) })), badges(r)));
+      });
+    }).catch(UI.fail);
+  }
+
+  // ---------- detail ----------
+
+  function showDetail(name) {
+    call('api_getRestaurant', name).then(drawDetail).catch(UI.fail);
+  }
+
+  function drawDetail(d) {
+    var r = d.restaurant;
+    var refresh = function () { showDetail(r.name); };
+    container.innerHTML = '';
+    container.appendChild(h('button', { class: 'btn small', text: '← All restaurants', onclick: showList }));
+    container.appendChild(h('div', { class: 'card' },
+      h('div', { class: 'row between' }, h('h2', { text: r.name }),
+        h('button', { class: 'btn', text: r.favorite ? '♥ Favorite' : '♡ Make favorite', onclick: function () {
+          call('api_setFavorite', 'restaurant', r.name, !r.favorite).then(refresh).catch(UI.fail);
+        } })),
+      h('div', { class: 'meta', text: [r.cuisine, price(r.price_level), r.address].filter(Boolean).join(' • ') }),
+      r.phone ? h('div', null, h('a', { href: 'tel:' + r.phone, text: r.phone })) : null,
+      r.notes ? h('p', { text: 'Notes: ' + r.notes }) : null,
+      h('div', { class: 'row' }, h('span', { text: 'Your rating' }),
+        UI.stars(d.rating.mine, function (n) { call('api_rate', 'restaurant', r.name, n).then(refresh).catch(UI.fail); }),
+        h('span', { class: 'meta', text: d.rating.count ? 'Average ' + d.rating.avg + ' from ' + d.rating.count : 'Not rated yet' })),
+      h('div', { class: 'row no-print' },
+        h('button', { class: 'btn primary', text: 'Eat here...', onclick: function () {
+          UI.eatOutDialog({ restaurant: { name: r.name, isNew: false }, date: UI.state.today, onDone: function () { UI.show('week'); } });
+        } }),
+        h('button', { class: 'btn', text: 'Edit', onclick: function () { openForm(d); } }),
+        h('button', { class: 'btn', text: 'Rename', onclick: function () {
+          UI.promptBox('Rename restaurant', 'New name', r.name).then(function (n) {
+            if (!n || n === r.name) return null;
+            return call('api_renameItem', 'lib_restaurants', r.name, n).then(function (res) {
+              UI.toast('Renamed in ' + res.count + ' place' + (res.count === 1 ? '' : 's'));
+              showDetail(n);
+            });
+          }).catch(UI.fail);
+        } }))));
+
+    container.appendChild(h('div', { class: 'card' }, h('h3', { text: 'Visits' }),
+      d.visits.length ? d.visits.map(function (v) { return h('div', { text: UI.longDate(v) }); }) : h('div', { class: 'meta', text: 'No visits yet.' })));
+
+    var box = h('textarea', { placeholder: 'Add a comment' });
+    var cc = h('div', { class: 'card' }, h('h3', { text: 'Comments' }));
+    if (!d.comments.length) cc.appendChild(h('div', { class: 'meta', text: 'No comments yet.' }));
+    d.comments.forEach(function (c) { cc.appendChild(h('p', null, h('strong', { text: c.member + ' ' }), h('span', { class: 'meta', text: c.date }), h('br'), c.text)); });
+    cc.appendChild(box);
+    cc.appendChild(h('div', { class: 'actions' }, h('button', { class: 'btn primary', text: 'Add comment', onclick: function () {
+      call('api_addComment', 'restaurant', r.name, box.value).then(refresh).catch(UI.fail);
+    } })));
+    container.appendChild(cc);
+  }
+
+  // ---------- add / edit ----------
+
+  function openForm(detail) {
+    var r = detail ? detail.restaurant : { name: '', cuisine: '', price_level: '', address: '', phone: '', notes: '', favorite: false, status: 'active' };
+    var f = { original_name: detail ? r.name : '', name: r.name, cuisine: r.cuisine, price_level: r.price_level, address: r.address, phone: r.phone, notes: r.notes, status: r.status, favorite: r.favorite };
+    var text = function (key, label) { return UI.field(label, h('input', { type: 'text', value: f[key], oninput: function (e) { f[key] = e.target.value; } })); };
+    container.innerHTML = '';
+    container.appendChild(h('button', { class: 'btn small', text: '← Cancel', onclick: function () { if (detail) showDetail(r.name); else showList(); } }));
+    container.appendChild(h('h2', { text: detail ? 'Edit ' + r.name : 'Add a restaurant' }));
+    container.appendChild(h('div', { class: 'card' }, text('name', 'Restaurant name'),
+      h('div', { class: 'grid2' },
+        UI.field('Cuisine', UI.select(UI.state.boot.lookups.cuisines, f.cuisine, function (e) { f.cuisine = e.target.value; }, '')),
+        UI.field('Price', UI.select([{ value: '1', label: '$' }, { value: '2', label: '$$' }, { value: '3', label: '$$$' }, { value: '4', label: '$$$$' }], f.price_level, function (e) { f.price_level = e.target.value; }, '')),
+        UI.field('Status', UI.select(['active', 'retired'], f.status, function (e) { f.status = e.target.value; }))),
+      text('address', 'Address'), text('phone', 'Phone'),
+      UI.field('Notes (what to order...)', h('textarea', { value: f.notes, oninput: function (e) { f.notes = e.target.value; } }))));
+    container.appendChild(h('div', { class: 'actions' }, h('button', { class: 'btn primary', text: 'Save restaurant', onclick: function () {
+      if (!f.name.trim()) { UI.toast('Please enter a restaurant name.', true); return; }
+      call('api_saveRestaurant', f).then(function (res) { UI.toast('Saved ' + res.name); showDetail(res.name); }).catch(UI.fail);
+    } })));
+  }
+
+  UI.screens.restaurants = { render: render, refresh: function () { if (listBox && listBox.isConnected) loadList(); } };
+})();
+</script>
+<script>
+// Shopping: list for the week, grouped by store aisle, with Have it / In cart ticks, email, copy and print.
+(function () {
+  'use strict';
+
+  var h = UI.h;
+  var call = UI.call;
+  var container = null;
+  var weekStart = null;
+  var data = null;
+  var dismissedChanges = false;
+
+  function boot() { return UI.state.boot; }
+
+  function render(c) {
+    container = c;
+    if (!weekStart) weekStart = Dates.startOfWeek(UI.state.today, boot().settings.shopping_week_start_day);
+    load();
+  }
+
+  function load() {
+    return call('api_getShoppingList', weekStart).then(function (r) {
+      data = r;
+      draw();
+    }).catch(UI.fail);
+  }
+
+  function qtyText(it) {
+    var q = it.qty == null ? '' : Units.formatQty(it.qty);
+    var u = it.unit && it.unit !== 'each' ? it.unit : '';
+    return (q + ' ' + u).trim();
+  }
+
+  function toggle(it, field, value) {
+    it[field] = value;
+    var fn = field === 'have_it' ? 'api_setHaveIt' : 'api_setInCart';
+    call(fn, it.item_id, value).then(draw).catch(function (e) { it[field] = !value; draw(); UI.fail(e); });
+  }
+
+  function aisleDialog(it) {
+    var sel = UI.select(data.aisles, it.aisle, null, 'No aisle');
+    var apply = function (d, always) {
+      call('api_setItemAisle', it.item_id, sel.value, always).then(function () { d.close(); load(); }).catch(UI.fail);
+    };
+    UI.dialog('Which aisle is ' + it.name + ' in?', UI.field('Aisle', sel), {
+      actions: [
+        { label: 'Just this list', onclick: function (d) { apply(d, false); } },
+        { label: it.ingredient ? 'Always' : 'Save', primary: true, onclick: function (d) { apply(d, !!it.ingredient); } }
+      ]
+    });
+  }
+
+  function itemRow(it, inHaveSection) {
+    var sources = (it.source_dishes || []).map(function (s) { return s.dish + ' (' + UI.dayLabel(s.date).replace(/^(Today|Tomorrow), /, '') + ')'; }).join(', ');
+    var flags = Array.isArray(it.flags) ? it.flags : [];
+    var note = [];
+    if (flags.indexOf('running_low') >= 0) note.push('running low');
+    if (flags.indexOf('unit_mismatch') >= 0) note.push('also listed in another unit');
+    if (flags.indexOf('no_longer_needed') >= 0) note.push('no longer needed for the plan');
+    return h('div', { class: 'item' + (it.in_cart ? ' carted' : '') },
+      inHaveSection ? null : h('label', { class: 'check', 'aria-label': 'In cart' },
+        h('input', { type: 'checkbox', checked: it.in_cart, onchange: function (e) { toggle(it, 'in_cart', e.target.checked); } })),
+      h('div', { class: 'name' }, h('span', { text: (qtyText(it) + ' ' + it.name).trim() }),
+        sources ? h('small', { text: sources }) : null,
+        note.length ? h('small', { text: note.join(' • ') }) : null),
+      !it.aisle ? h('span', { class: 'badge warn', text: 'Needs an aisle' }) : null,
+      h('button', { class: 'btn small no-print', text: 'Aisle', onclick: function () { aisleDialog(it); } }),
+      h('label', { class: 'check no-print' },
+        h('input', { type: 'checkbox', checked: it.have_it, onchange: function (e) { toggle(it, 'have_it', e.target.checked); } }), 'Have it'));
+  }
+
+  function changesBanner() {
+    var c = data.changes;
+    if (dismissedChanges || !(c.added.length || c.removed.length || c.changed.length)) return null;
+    var parts = [];
+    if (c.added.length) parts.push('New: ' + c.added.map(function (x) { return x.name; }).join(', '));
+    if (c.removed.length) parts.push('Removed: ' + c.removed.map(function (x) { return x.name; }).join(', '));
+    if (c.changed.length) parts.push('Amount changed: ' + c.changed.map(function (x) { return x.name; }).join(', '));
+    return h('div', { class: 'banner row between' }, h('span', { text: parts.join('  •  ') }),
+      h('button', { class: 'btn small', text: 'OK', onclick: function () { dismissedChanges = true; draw(); } }));
+  }
+
+  function shiftWeek(delta) {
+    weekStart = Dates.addDays(weekStart, delta);
+    dismissedChanges = false;
+    load();
+  }
+
+  function draw() {
+    container.innerHTML = '';
+    var thisWeek = Dates.startOfWeek(UI.state.today, boot().settings.shopping_week_start_day);
+    container.appendChild(h('div', { class: 'row between' }, h('h2', { text: 'Shopping list' }),
+      h('div', { class: 'row no-print' },
+        h('button', { class: 'btn small', text: '◀', 'aria-label': 'Earlier week', onclick: function () { shiftWeek(-7); } }),
+        h('strong', { text: (weekStart === thisWeek ? 'This week' : weekStart === Dates.addDays(thisWeek, 7) ? 'Next week' : 'Week of ' + weekStart) }),
+        h('button', { class: 'btn small', text: '▶', 'aria-label': 'Later week', onclick: function () { shiftWeek(7); } }))));
+    container.appendChild(h('div', { class: 'meta', text: UI.longDate(data.week_start) + ' to ' + UI.longDate(data.week_end) + ' • ' + boot().settings.store_name }));
+
+    container.appendChild(h('div', { class: 'row no-print' },
+      h('button', { class: 'btn primary', text: 'Email list', onclick: emailDialog }),
+      h('button', { class: 'btn', text: 'Copy as text', onclick: copyDialog }),
+      h('button', { class: 'btn', text: 'Print', onclick: function () { window.print(); } }),
+      h('button', { class: 'btn', text: 'Add an item', onclick: addDialog }),
+      h('button', { class: 'btn', text: 'Running low', onclick: lowDialog }),
+      h('button', { class: 'btn', text: 'Refresh', onclick: load })));
+
+    var banner = changesBanner();
+    if (banner) container.appendChild(banner);
+    if (data.missingRecipes.length) {
+      container.appendChild(h('div', { class: 'banner', text: 'No recipe yet, so nothing was added for: ' +
+        data.missingRecipes.map(function (m) { return m.dish; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', ') }));
+    }
+
+    var need = data.items.filter(function (i) { return !i.have_it; });
+    var have = data.items.filter(function (i) { return i.have_it; });
+    if (!data.items.length) {
+      container.appendChild(h('div', { class: 'empty', text: 'Nothing to buy yet. Plan some dinners for this week, or add an item.' }));
+    }
+    var groups = [];
+    var byName = {};
+    need.forEach(function (i) {
+      var name = i.aisle || 'Needs an aisle';
+      if (!byName[name]) { byName[name] = { name: name, items: [] }; groups.push(byName[name]); }
+      byName[name].items.push(i);
+    });
+    groups.forEach(function (g) {
+      container.appendChild(h('div', { class: 'aisle' }, h('h3', { text: g.name }), g.items.map(function (i) { return itemRow(i, false); })));
+    });
+    if (need.length && !groups.length) container.appendChild(h('div', { class: 'empty', text: 'Everything is ticked off.' }));
+    if (have.length) {
+      container.appendChild(h('details', { class: 'no-print' }, h('summary', { text: 'Already have (' + have.length + ')' }),
+        have.map(function (i) { return itemRow(i, true); })));
+    }
+  }
+
+  function emailDialog() {
+    var to = h('input', { type: 'text', value: boot().me.email || '', placeholder: 'name@example.com, other@example.com' });
+    var all = h('input', { type: 'checkbox' });
+    UI.dialog('Email the shopping list', h('div', null,
+      UI.field('Send to (separate addresses with commas)', to),
+      h('label', { class: 'check' }, all, 'Include items I already have')), {
+      actions: [{ label: 'Send', primary: true, onclick: function (d) {
+        var list = to.value.split(/[,;\s]+/).filter(Boolean);
+        call('api_emailList', weekStart, list, all.checked).then(function (r) {
+          d.close();
+          UI.toast('Sent to ' + r.sent + ' address' + (r.sent === 1 ? '' : 'es'));
+        }).catch(UI.fail);
+      } }]
+    });
+  }
+
+  function copyDialog() {
+    call('api_getListText', weekStart, false).then(function (text) {
+      var area = h('textarea', { readonly: true, rows: '14', value: text });
+      UI.dialog('Shopping list as text', h('div', null, area), {
+        actions: [{ label: 'Copy', primary: true, onclick: function () {
+          area.select();
+          var ok = false;
+          try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+          UI.toast(ok ? 'Copied' : 'Select the text and copy it by hand.', !ok);
+        } }]
+      });
+      setTimeout(function () { area.select(); }, 50);
+    }).catch(UI.fail);
+  }
+
+  function addDialog() {
+    var name = h('input', { type: 'text', placeholder: 'e.g. paper towels' });
+    var qty = h('input', { type: 'text', placeholder: 'Amount (optional)' });
+    var unit = h('input', { type: 'text', list: 'dl-shop-units', placeholder: 'Unit (optional)' });
+    var aisle = UI.select(data.aisles, '', null, 'Choose an aisle');
+    var units = h('datalist', { id: 'dl-shop-units' }, boot().lookups.units.map(function (u) { return h('option', { value: u }); }));
+    UI.dialog('Add an item', h('div', null, UI.field('Item', name), h('div', { class: 'grid2' }, UI.field('Amount', qty), UI.field('Unit', unit)), UI.field('Aisle', aisle), units), {
+      actions: [{ label: 'Add', primary: true, onclick: function (d) {
+        call('api_addManualItem', weekStart, name.value, qty.value, unit.value, aisle.value).then(function () { d.close(); load(); }).catch(UI.fail);
+      } }]
+    });
+    setTimeout(function () { name.focus(); }, 50);
+  }
+
+  function lowDialog() {
+    var ing = h('input', { type: 'text', list: 'dl-low', placeholder: 'Start typing an ingredient' });
+    var list = h('datalist', { id: 'dl-low' }, boot().lookups.ingredients.map(function (u) { return h('option', { value: u }); }));
+    UI.dialog('Running low', h('div', null, h('p', { class: 'meta', text: 'It goes on the list until you tick it as picked up.' }), UI.field('Ingredient', ing), list), {
+      actions: [{ label: 'Add to list', primary: true, onclick: function (d) {
+        call('api_markRunningLow', ing.value).then(function (r) {
+          d.close();
+          if (boot().lookups.ingredients.indexOf(r.ingredient) < 0) boot().lookups.ingredients.push(r.ingredient);
+          load();
+        }).catch(UI.fail);
+      } }]
+    });
+  }
+
+  UI.screens.shopping = { render: render, refresh: load };
+})();
+</script>
+<script>UI.init();</script>
+</body>
+</html>

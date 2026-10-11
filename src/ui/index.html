@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Family Meal Planner</title>
+<!--INLINE:css:styles.css-->
+</head>
+<body>
+<header class="top">
+  <h1>Family Meal Planner</h1>
+  <nav id="nav" aria-label="Sections"></nav>
+  <div id="who" class="who"></div>
+</header>
+<div id="busy" class="busy" hidden></div>
+<main id="view" aria-live="polite"></main>
+<div id="toasts"></div>
+<div id="dialogs"></div>
+<!--INLINE:js:../logic/dates.js-->
+<!--INLINE:js:../logic/units.js-->
+<!--INLINE:js:../logic/recipe.js-->
+<!--INLINE:js:core.js-->
+<!--INLINE:js:recipeview.js-->
+<!--INLINE:js:week.js-->
+<!--INLINE:js:plan.js-->
+<!--INLINE:js:dishes.js-->
+<!--INLINE:js:restaurants.js-->
+<!--INLINE:js:shopping.js-->
+<script>UI.init();</script>
+</body>
+</html>
